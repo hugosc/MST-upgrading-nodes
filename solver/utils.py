@@ -1,4 +1,7 @@
+__all__ = ["load_instance"]
+
 from graph_tool.all import Graph
+import numpy as np
 
 #generic case, for sharing with class
 def load_instance_(filepath):
@@ -91,14 +94,32 @@ def load_instance(filepath):
 
 			print (v1, v2, w1, w2, w3)
 
-		for v in g.vertices():
+		# identify how weights are for vertices
+		line = f.readline()
+		v_cost = [ float(x) for x in line.split(" ") if x != " "]
 
-			line = f.readline()
+		if len(v_cost) > 1: # case where formatting is incorrect
+			for i in range(n):
+				v = g.vertex(i)
+				node_cost[v] = v_cost[i]
+				node_upgraded[i] = False
 
-			c = float(line)
+		else:
 
-			node_cost[v] = c
+			v = g.vertex(0)
+			node_cost[v] = float(v_cost[0])
 			node_upgraded[v] = False
+
+			vertices = g.vertices()
+			vertices.next()
+			for v in vertices:
+
+				line = f.readline()
+
+				c = float(line)
+
+				node_cost[v] = c
+				node_upgraded[v] = False
 
 	g.vp.is_upgraded   = node_upgraded
 	g.vp.cost          = node_cost
