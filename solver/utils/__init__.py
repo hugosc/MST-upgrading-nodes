@@ -54,7 +54,6 @@ def load_instance(filepath):
 
 	edge_weight = g.new_edge_property("float")
 	edge_upgradeable_weights = g.new_edge_property("vector<float>")
-	edge_upgrade_level = g.new_edge_property("int")
 
 	with open(filepath, "r") as f:
 
@@ -69,7 +68,7 @@ def load_instance(filepath):
 
 		g.add_vertex(n)
 
-		print (n, m)
+		#print (n, m)
 
 		for _ in range(m):
 
@@ -90,9 +89,8 @@ def load_instance(filepath):
 
 			edge_weight[e] = w1
 			edge_upgradeable_weights[e] = [w1, w2, w3]
-			edge_upgrade_level[e] = 0
 
-			print (v1, v2, w1, w2, w3)
+			#print (v1, v2, w1, w2, w3)
 
 		# identify how weights are for vertices
 		line = f.readline()
@@ -125,7 +123,6 @@ def load_instance(filepath):
 	g.vp.cost          = node_cost
 	g.ep.weight        = edge_weight
 	g.ep.all_weights   = edge_upgradeable_weights
-	g.ep.upgrade_level = edge_upgrade_level
 
 	return g
 
