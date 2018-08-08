@@ -56,6 +56,9 @@ def load_instance(filepath):
 	edge_upgradeable_weights = g.new_edge_property("vector<float>")
 	edge_upgrade_level = g.new_edge_property("int")
 
+	graph_total_cost = g.new_graph_property("float")
+	graph_total_cost[g] = 0
+
 	with open(filepath, "r") as f:
 
 		first_line = f.readline()
@@ -127,5 +130,8 @@ def load_instance(filepath):
 	g.ep.all_weights   = edge_upgradeable_weights
 	g.ep.upgrade_level = edge_upgrade_level
 
-	return g
+	for v in g.vertices():
+		graph_total_cost[g] += node_cost[v]
+	g.gp.total_cost = graph_total_cost
 
+	return g
