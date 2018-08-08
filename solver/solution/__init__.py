@@ -1,7 +1,8 @@
-from utils import load_instance
 from graph_tool.all import *
 from graph_tool.topology import min_spanning_tree
 from numpy import inner
+
+from utils import load_instance
 
 class Solution:
 
