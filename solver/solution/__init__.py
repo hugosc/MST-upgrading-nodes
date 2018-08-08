@@ -6,6 +6,7 @@ from utils import load_instance
 
 class Solution:
 
+
 	def __init__(self, budget, filepath=None, g=None):
 
 		self.budget = budget
@@ -31,9 +32,11 @@ class Solution:
 
 		self._update_mst()
 
+
 	def __str__(self):
 		arr = self.g.vp.is_upgraded.get_array()
 		return '{}, with obj_value {}'.format(arr, self.obj_value())
+
 
 	def copy(self):
 
@@ -44,6 +47,7 @@ class Solution:
 
 		"""
 		return self._obj_value
+
 
 	def upgrade_vertex(self, v):
 
@@ -77,6 +81,7 @@ class Solution:
 		
 		return False
 
+
 	def downgrade_vertex(self, v):
 
 		g = self.g
@@ -108,6 +113,7 @@ class Solution:
 
 		return False
 
+
 	def _update_mst(self):
 
 		g = self.g
@@ -119,6 +125,7 @@ class Solution:
 		)
 
 class _NeighbourhoodIterator:
+
 
 	def __init__(self, s, neigh, i=-1):
 		
@@ -151,13 +158,17 @@ class _NeighbourhoodIterator:
 
 
 class Neighbourhood:
+
+
 	"""Very basic neighbourhood for validation purposes"""
 	def __init__(self, s):
 		self.s = s
 		self._mem = [-1] * s.N
 
+
 	def __iter__(self):
 		return _NeighbourhoodIterator(self.s.copy(), self)
+
 
 	def __getitem__(self, i):
 		"""returns i-th neighbour
