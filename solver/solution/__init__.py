@@ -148,24 +148,24 @@ class Solution:
 	def vertex_impact_ratio_on_tree(self):
 		cost = self.g.vp.cost.a
 		upgraded = self.g.vp.is_upgraded.a.astype(bool)
-		to_upg = np.logical_not(upgraded)
+		to_upg = np.logical_and(np.logical_not(upgraded),
+			cost <= self.budget - self.running_cost)
 
 		on_mst = self.mst.a.astype(bool)
 		edges = self.g.get_edges()[on_mst]
 		weights = self.g.ep.weight.a[on_mst]
 
-
-		lvl_after_upg = np.sum(
-			np.column_stack((
-				np.concatenate((to_upg[edges[:,0]], to_upg[edges[:,1]])),
-				np.concatenate((upgraded[edges[:,1]], upgraded[edges[:,0]]))
-				)),
-			axis=1)
+		e_to_upg_1 = to_upg[edges[:,0]]
+		e_to_upg_2 = to_upg[edges[:,1]]
+		e_indexes = edges[:,2][e_to_upg_1]
 
 		# uses undirectedness of edges to represent different upgraded vertices
-		edges = np.concatenate((edges[:,:2], edges[:, -2::-1]))
-		delta = np.concatenate((weights, weights)) -\
-		 self.ewa[np.concatenate((on_mst, on_mst)), lvl_after_upg]
+		edges = np.concatenate((edges[:,:2][e_to_upg_1], 
+			edges[:,-2::-1][e_to_upg_2]))
+		weights = np.concatenate((weights[e_to_upg_1], weights[e_to_upg_1]))
+
+		delta = weights - self.ewa[np.concatenate(
+			(e_indexes, e_indexes)), to_upg[edges[:, 0]].astype(int) + upgraded[edges[:, 1]]]
 
 		# graph undirected -> edges needs to be accounted for both vertices
 		delta = binned_statistic(
