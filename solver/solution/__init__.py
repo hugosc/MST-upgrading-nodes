@@ -154,9 +154,9 @@ class Solution:
 			np.concatenate((edges[:,0], edges[:,1])),
 			np.concatenate((delta,delta)),
 			statistic=np.sum,
-			bins=np.arange(self.g.num_vertices() + 1))
+			bins=np.arange(self.g.num_vertices() + 1))[0]
 
-		return delta
+		return delta / self.g.vp.cost.a
 
 
 
