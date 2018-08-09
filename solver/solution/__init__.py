@@ -143,13 +143,18 @@ class Solution:
 	def vertex_impact_ratio_on_tree(self):
 		on_mst = self.mst.a.astype(bool)
 		edges = self.g.get_edges()[on_mst]
-
 		weights = self.g.ep.weight.a[on_mst]
-		update_level = np.sum(self.g.vp.is_upgraded.a[edges[:,:2]], axis=1)
-		delta = weights - self.ewa[on_mst, update_level]
+		upgraded = np.ones(self.g.num_vertices(), dtype=bool) #self.g.vp.is_upgraded.a[edges[:,:2]]
+		
+		upgrade_level = np.sum(upgraded[edges[:,:2]], axis=1)
+		delta = weights - self.ewa[on_mst, upgrade_level]
+
+		# graph undirected -> edges needs to be accounted for both vertices
 		delta = binned_statistic(
-			edges[:,0], delta, statistic=np.sum, bins=np.arange(
-				self.g.num_vertices() + 1))
+			np.concatenate((edges[:,0], edges[:,1])),
+			np.concatenate((delta,delta)),
+			statistic=np.sum,
+			bins=np.arange(self.g.num_vertices() + 1))
 
 		return delta
 
