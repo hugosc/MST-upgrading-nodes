@@ -128,35 +128,55 @@ class Solution:
 
 	# Gen array of edge weights with dimension (e,3).
 	def edge_weight_array(self):
-		ewa = np.zeros((self.g.num_edges(), 3))
+		ewa = np.zeros((2 * self.g.num_edges(), 3))
 		edges = self.g.get_edges()
+		e_len = self.g.num_edges()
 		i = 0
 		for e in edges:
 			edge = self.g.edge(e[0], e[1])
 			ewa[i] = np.array(self.g.ep.all_weights[edge])
+			ewa[i + e_len] = np.array(self.g.ep.all_weights[edge])
 			i += 1
 		return ewa
 
 
-	# Compute ratio of cost per upgrade.1
-	#  note:iterating with iterators are slow compared to array operations
+	# Compute current min_spam_tree upgrade cost per weight varition per vertex
+	#  for all vertices simultaneously. Uses arrays as a promise of better
+	#  performance from graph_tool documentation.
+	#
+	#  Note: iterating with iterators are slow compared to array operations.
 	def vertex_impact_ratio_on_tree(self):
+		cost = self.g.vp.cost.a
+		upgraded = self.g.vp.is_upgraded.a.astype(bool)
+		to_upg = np.logical_not(upgraded)
+
 		on_mst = self.mst.a.astype(bool)
 		edges = self.g.get_edges()[on_mst]
 		weights = self.g.ep.weight.a[on_mst]
-		upgraded = np.ones(self.g.num_vertices(), dtype=bool) #self.g.vp.is_upgraded.a[edges[:,:2]]
-		
-		upgrade_level = np.sum(upgraded[edges[:,:2]], axis=1)
-		delta = weights - self.ewa[on_mst, upgrade_level]
+
+
+		lvl_after_upg = np.sum(
+			np.column_stack((
+				np.concatenate((to_upg[edges[:,0]], to_upg[edges[:,1]])),
+				np.concatenate((upgraded[edges[:,1]], upgraded[edges[:,0]]))
+				)),
+			axis=1)
+
+		# uses undirectedness of edges to represent different upgraded vertices
+		edges = np.concatenate((edges[:,:2], edges[:, -2::-1]))
+		delta = np.concatenate((weights, weights)) -\
+		 self.ewa[np.concatenate((on_mst, on_mst)), lvl_after_upg]
 
 		# graph undirected -> edges needs to be accounted for both vertices
 		delta = binned_statistic(
-			np.concatenate((edges[:,0], edges[:,1])),
-			np.concatenate((delta,delta)),
+			edges[:,0],
+			delta,
 			statistic=np.sum,
 			bins=np.arange(self.g.num_vertices() + 1))[0]
 
-		return delta / self.g.vp.cost.a
+		# maybe pure python will prove not effective
+		# how much you spent per upgrade unit
+		return (cost[to_upg] / delta[to_upg][0])
 
 
 
