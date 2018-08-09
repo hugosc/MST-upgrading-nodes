@@ -1,7 +1,8 @@
+import numpy as np
+from scipy.stats import binned_statistic
+
 from graph_tool.all import *
 from graph_tool.topology import min_spanning_tree
-from numpy import inner
-
 from utils import load_instance
 
 class Solution:
@@ -20,7 +21,7 @@ class Solution:
 		else:
 
 			self.g = g
-			self.running_cost = inner(g.vp.cost.get_array(), 
+			self.running_cost = np.inner(g.vp.cost.get_array(), 
 				g.vp.is_upgraded.get_array())
 
 		assert hasattr(self.g.vp, 'is_upgraded')
@@ -29,6 +30,8 @@ class Solution:
 		assert hasattr(self.g.ep, 'all_weights')
 
 		self.N = self.g.num_vertices()
+
+		self.ewa = self.edge_weight_array()
 
 		self._update_mst()
 
@@ -39,13 +42,11 @@ class Solution:
 
 
 	def copy(self):
-
 		return Solution(self.budget, g=self.g.copy())
 
-	def obj_value(self):
-		"""objective function value: weight of MST
 
-		"""
+	"""objective function value: weight of MST"""
+	def obj_value(self):
 		return self._obj_value
 
 
@@ -123,6 +124,38 @@ class Solution:
 		self._obj_value = sum(
 			map(lambda e: g.ep.weight[e]*self.mst[e], g.edges())
 		)
+
+
+	# Gen array of edge weights with dimension (e,3).
+	def edge_weight_array(self):
+		ewa = np.zeros((self.g.num_edges(), 3))
+		edges = self.g.get_edges()
+		i = 0
+		for e in edges:
+			edge = self.g.edge(e[0], e[1])
+			ewa[i] = np.array(self.g.ep.all_weights[edge])
+			i += 1
+		return ewa
+
+
+	# Compute ratio of cost per upgrade.1
+	#  note:iterating with iterators are slow compared to array operations
+	def vertex_impact_ratio_on_tree(self):
+		on_mst = self.mst.a.astype(bool)
+		edges = self.g.get_edges()[on_mst]
+
+		weights = self.g.ep.weight.a[on_mst]
+		update_level = np.sum(self.g.vp.is_upgraded.a[edges[:,:2]], axis=1)
+		delta = weights - self.ewa[on_mst, update_level]
+		delta = binned_statistic(
+			edges[:,0], delta, statistic=np.sum, bins=np.arange(
+				self.g.num_vertices() + 1))
+
+		return delta
+
+
+
+
 
 class _NeighbourhoodIterator:
 
