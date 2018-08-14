@@ -33,7 +33,11 @@ class Solution:
 
 		self.ewa = self.edge_weight_array()
 
+		self.v_cost = self.g.vp.cost.a
+
 		self._update_mst()
+
+		self.atualize_allowed_upgrades()
 
 
 	def __str__(self):
@@ -78,6 +82,8 @@ class Solution:
 
 			self._update_mst()
 
+			self.atualize_allowed_upgrades()
+
 			return True
 		
 		return False
@@ -110,6 +116,8 @@ class Solution:
 
 			self._update_mst()
 
+			self.atualize_allowed_upgrades()
+
 			return True	
 
 		return False
@@ -126,7 +134,23 @@ class Solution:
 		)
 
 
+	# Compute which vertices are still able to be updated
+	def atualize_allowed_upgrades(self):
+		self.to_upg = np.logical_and(
+			np.logical_not(self.g.vp.is_upgraded.a.astype(bool)),
+			self.v_cost <= (self.budget - self.running_cost))
+
+
+	def available_vertices(self):
+		return np.sum(self.to_upg)
+
+
+	def is_saturated(self):
+		return self.available_vertices() == 0
+
+
 	# Gen array of edge weights with dimension (e,3).
+	#  Note: duplicate information from edges to make it faster
 	def edge_weight_array(self):
 		ewa = np.zeros((2 * self.g.num_edges(), 3))
 		edges = self.g.get_edges()
@@ -146,37 +170,37 @@ class Solution:
 	#
 	#  Note: iterating with iterators are slow compared to array operations.
 	def vertex_impact_ratio_on_tree(self):
-		cost = self.g.vp.cost.a
 		upgraded = self.g.vp.is_upgraded.a.astype(bool)
-		to_upg = np.logical_and(np.logical_not(upgraded),
-			cost <= self.budget - self.running_cost)
 
 		on_mst = self.mst.a.astype(bool)
 		edges = self.g.get_edges()[on_mst]
 		weights = self.g.ep.weight.a[on_mst]
 
-		e_to_upg_1 = to_upg[edges[:,0]]
-		e_to_upg_2 = to_upg[edges[:,1]]
-		e_indexes = edges[:,2][e_to_upg_1]
+		e_to_upg_1 = self.to_upg[edges[:,0]]
+		e_to_upg_2 = self.to_upg[edges[:,1]]
+
+		e_indexes = np.concatenate((edges[e_to_upg_1, 2], edges[e_to_upg_2, 2]))
 
 		# uses undirectedness of edges to represent different upgraded vertices
 		edges = np.concatenate((edges[:,:2][e_to_upg_1], 
 			edges[:,-2::-1][e_to_upg_2]))
-		weights = np.concatenate((weights[e_to_upg_1], weights[e_to_upg_1]))
-
-		delta = weights - self.ewa[np.concatenate(
-			(e_indexes, e_indexes)), to_upg[edges[:, 0]].astype(int) + upgraded[edges[:, 1]]]
+		weights = np.concatenate((weights[e_to_upg_1], weights[e_to_upg_2]))
+		delta = weights - self.ewa[e_indexes,
+		 self.to_upg[edges[:, 0]].astype(int) + upgraded[edges[:, 1]]]
 
 		# graph undirected -> edges needs to be accounted for both vertices
 		delta = binned_statistic(
 			edges[:,0],
 			delta,
 			statistic=np.sum,
-			bins=np.arange(self.g.num_vertices() + 1))[0]
+			bins=np.append(np.arange(self.N)[self.to_upg], [self.N + 1]))
 
 		# maybe pure python will prove not effective
 		# how much you spent per upgrade unit
-		return (cost[to_upg] / delta[to_upg][0])
+		# print(np.column_stack((self.v_cost[self.to_upg] / delta[0], 
+		# 		delta[1][:-1])))
+		return np.column_stack((self.v_cost[self.to_upg] / delta[0], 
+				delta[1][:-1]))
 
 
 
