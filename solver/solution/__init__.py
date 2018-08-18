@@ -184,9 +184,7 @@ class Solution:
 
 		self.mst = min_spanning_tree(g, g.ep.weight)
 
-		self._obj_value = sum(
-			map(lambda e: g.ep.weight[e]*self.mst[e], g.edges())
-		)
+		self._obj_value = np.sum(self.g.ep.weight.a[self.mst.a])
 
 
 	# Compute which vertices are still able to be updated
@@ -341,7 +339,7 @@ def first_improvement(N, k):
 		if v < current_v:
 
 			N.update(c)
-	
+
 			return True
 
 	return False
