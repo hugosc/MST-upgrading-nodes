@@ -5,9 +5,9 @@ from graph_tool.all import *
 from graph_tool.topology import min_spanning_tree
 from utils import load_instance
 
-class Solution:
+class SolutionGlobals:
 
-
+	# everything that must be done ONLY once
 	def __init__(self, budget, filepath=None, g=None):
 
 		self.budget = budget
@@ -19,10 +19,7 @@ class Solution:
 
 			self.g = load_instance(filepath)
 		else:
-
 			self.g = g
-			self.running_cost = np.inner(g.vp.cost.get_array(), 
-				g.vp.is_upgraded.get_array())
 
 		assert hasattr(self.g.vp, 'is_upgraded')
 		assert hasattr(self.g.vp, 'cost')
@@ -30,14 +27,43 @@ class Solution:
 		assert hasattr(self.g.ep, 'all_weights')
 
 		self.N = self.g.num_vertices()
-
 		self.ewa = self.edge_weight_array()
-
 		self.v_cost = self.g.vp.cost.a
+		self.edges = self.g.get_edges()
+
+
+class Solution:
+
+
+	def __init__(self, budget, filepath=None, sol_globals):
+
+		# everything that must be done ONLY once goes to globals
+		if sol_globals is not None:
+			self.globals = sol_globals
+		else:
+			self.globals = SolutionGlobals(budget, filepath, g)
+
+		self.upgraded = self.gp.vp.is_upgraded.a
+		self.running_cost = np.inner(self.globals.v_cost,
+				self.upgraded.get_array())
+
+
+		self.cur_edge_weight = self.get_edge_weights()
+		self.edge_upgrade_level = np.zeros(len(cur_edge_weight), dtype=int)
 
 		self._update_mst()
-
 		self.atualize_allowed_upgrades()
+
+
+	# Mix local information of upgraded vertices with global weight weights to
+	#  find current edge weight values.
+	def get_edge_weights(self):
+		edges = self.globals.edges
+		return self.globals.ewa[:,
+			self.upgrade[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
+
+
+	def atualize_current_edge_weight(self, v):
 
 
 	def __str__(self):
@@ -52,6 +78,31 @@ class Solution:
 	"""objective function value: weight of MST"""
 	def obj_value(self):
 		return self._obj_value
+
+
+	# Assumes you know what you're doing. Performs both upgrade and downgrade
+	#  using mode selection
+	def fast_v_upgrade(self, v, mode=True):
+		inc_mult = (mode * 1) + (not mode * -1)
+		v_cost = g.vp.cost[v]
+
+		self.fast_weight_update(v, inc)
+
+		self.upgraded[v] = mode
+		self.running_cost += inc_mult *v_cost
+
+		self._update_mst()
+		self.atualize_allowed_upgrades()
+
+
+	def fast_weight_update(self, v, inc=1):
+		e_indexes = self.edges[:, 2][np.logical_or(
+			self.edges[:,0] == v,
+			self.edges[:, 1] == v)]
+		self.edge_upgrade_level[e_indexes] += inc
+		self.cur_edge_weight[e_indexes] = self.ewa[e_indexes, 
+			self.edge_upgrade_level[e_indexes]]
+
 
 
 	def upgrade_vertex(self, v):
@@ -125,19 +176,19 @@ class Solution:
 
 	def _update_mst(self):
 
-		g = self.g
+		g = self.globals.g
 
 		self.mst = min_spanning_tree(g, g.ep.weight)
 
 		self._obj_value = sum(
-			map(lambda e: g.ep.weight[e]*self.mst[e], g.edges())
+			map(lambda e: g.ep.weight[e] * self.mst[e], g.edges())
 		)
 
 
 	# Compute which vertices are still able to be updated
 	def atualize_allowed_upgrades(self):
 		self.to_upg = np.logical_and(
-			np.logical_not(self.g.vp.is_upgraded.a.astype(bool)),
+			np.logical_not(self.upgraded),
 			self.v_cost <= (self.budget - self.running_cost))
 
 
@@ -170,11 +221,10 @@ class Solution:
 	#
 	#  Note: iterating with iterators are slow compared to array operations.
 	def vertex_impact_ratio_on_tree(self):
-		upgraded = self.g.vp.is_upgraded.a.astype(bool)
 
 		on_mst = self.mst.a.astype(bool)
-		edges = self.g.get_edges()[on_mst]
-		weights = self.g.ep.weight.a[on_mst]
+		edges = self.globals.g.get_edges()[on_mst]
+		weights = self.cur_edge_weight[on_mst]
 
 		e_to_upg_1 = self.to_upg[edges[:,0]]
 		e_to_upg_2 = self.to_upg[edges[:,1]]
@@ -186,7 +236,7 @@ class Solution:
 			edges[:,-2::-1][e_to_upg_2]))
 		weights = np.concatenate((weights[e_to_upg_1], weights[e_to_upg_2]))
 		delta = weights - self.ewa[e_indexes,
-		 self.to_upg[edges[:, 0]].astype(int) + upgraded[edges[:, 1]]]
+		 self.to_upg[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
 
 		# graph undirected -> edges needs to be accounted for both vertices
 		delta = binned_statistic(

@@ -8,6 +8,8 @@ def select_candidate(sol, alpha):
 	ratio = candidates[:,0]
 	d = alpha * np.ptp(ratio)
 	c_min = np.min(ratio)
+
+	# random uniform sample of rcl
 	return np.random.permutation(candidates[ratio <= c_min + d])[0]
 
 
@@ -34,12 +36,12 @@ def grasp(solution, params, neigh, alpha=0.2, max_it=100):
 	sol = solution(*params)
 	opt = sol
 	while n_it < max_it:
-		print("Grasp iteration {}".format(n_it))
+		# print("Grasp iteration {}".format(n_it))
 		sol1 = fimprov_local_search(
 			build(sol, alpha), neigh)
-		print(sol1)
+		# print(sol1)
 		if opt._obj_value > sol1._obj_value:
 			opt = sol1
 		n_it += 1
-	print(opt)
+	# print(opt)
 	return opt
