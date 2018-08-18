@@ -152,8 +152,11 @@ class Solution:
 		g.ep.weight.a = self.cur_edge_weight
 		self.mst = min_spanning_tree(g, g.ep.weight)
 
-		self._obj_value = sum(
-			map(lambda e: g.ep.weight[e] * self.mst[e], g.edges()))
+		self._obj_value = self.total_tree_delay()
+
+
+	def total_tree_delay(self):
+		return np.sum(self.cur_edge_weight[self.mst.a])
 
 
 	# Compute which vertices are still able to be updated
