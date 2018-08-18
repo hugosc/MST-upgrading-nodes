@@ -5,6 +5,8 @@ from graph_tool.all import *
 from graph_tool.topology import min_spanning_tree
 from utils import load_instance
 
+from itertools import product, combinations
+
 class Solution:
 
 
@@ -12,6 +14,8 @@ class Solution:
 
 		self.budget = budget
 		self.running_cost = 0
+
+		self._DIRTY = False
 		
 		assert filepath is not None or g is not None
 
@@ -42,7 +46,8 @@ class Solution:
 
 	def __str__(self):
 		arr = self.g.vp.is_upgraded.get_array()
-		return '{}, with obj_value {}'.format(arr, self.obj_value())
+		return '{}, with obj_value {} and cost {}'.format(arr, 
+			self.obj_value(), self.running_cost)
 
 
 	def copy(self):
@@ -53,10 +58,14 @@ class Solution:
 
 	"""objective function value: weight of MST"""
 	def obj_value(self):
+		if self._DIRTY:
+			self._update_mst()
+			self._DIRTY = False
+
 		return self._obj_value
 
 
-	def upgrade_vertex(self, v):
+	def upgrade_vertex(self, v, update_mst=False):
 
 		g = self.g
 
@@ -64,7 +73,7 @@ class Solution:
 
 		v_cost = g.vp.cost[v]
 
-		if not g.vp.is_upgraded[v] and \
+		if (not g.vp.is_upgraded[v]) and \
 		self.running_cost + v_cost <= self.budget:
 
 			g.vp.is_upgraded[v] = True
@@ -82,7 +91,10 @@ class Solution:
 
 			self.running_cost += v_cost
 
-			self._update_mst()
+			if update_mst:
+				self._update_mst()
+			else:
+				self._DIRTY = True
 
 			self.atualize_allowed_upgrades()
 
@@ -91,7 +103,7 @@ class Solution:
 		return False
 
 
-	def downgrade_vertex(self, v):
+	def downgrade_vertex(self, v, update_mst=False):
 
 		g = self.g
 
@@ -116,12 +128,53 @@ class Solution:
 
 			self.running_cost -= v_cost
 
-			self._update_mst()
+			if update_mst:
+				self._update_mst()
+			else:
+				self._DIRTY = True
+
 
 			self.atualize_allowed_upgrades()
 
 			return True	
 
+		return False
+
+	def upgrade_vertex_unsafe(self, v, update_mst=False):
+
+		g = self.g
+
+		v = g.vertex(v)
+
+		v_cost = g.vp.cost[v]
+
+		if not g.vp.is_upgraded[v]:
+
+			g.vp.is_upgraded[v] = True
+
+			for e in v.all_edges():
+				
+				all_weights = g.ep.all_weights[e]
+
+				w = e.target()
+
+				if g.vp.is_upgraded[w]:
+					g.ep.weight[e] = all_weights[2]
+				else:
+					g.ep.weight[e] = all_weights[1] 
+
+			self.running_cost += v_cost
+
+			if update_mst:
+				self._update_mst()
+			else:
+				self._DIRTY = True
+
+
+			self.atualize_allowed_upgrades()
+
+			return True
+		
 		return False
 
 
@@ -205,71 +258,90 @@ class Solution:
 				delta[1][:-1]))
 
 
-
-class _NeighbourhoodIterator:
-
-
-	def __init__(self, s, neigh, i=-1):
-		
-		self.s = s
-		self.neigh = neigh
-		self.i = i
-
-		self.count = 0
-
-
-	def __next__(self):
-
-		if self.i < self.s.N:
-
-			if self.i >= 0:
-				self.s.downgrade_vertex(self.i)
-
-			self.i += 1
-
-			while self.i < self.s.N:
-
-				if self.s.upgrade_vertex(self.i):
-					self.neigh._mem[self.count] = self.i
-					self.count += 1
-					return self.s
-
-				self.i += 1
-
-		raise StopIteration
-
-
 class Neighbourhood:
 
-
-	"""Very basic neighbourhood for validation purposes"""
 	def __init__(self, s):
 		self.s = s
-		self._mem = [-1] * s.N
+
+	def non_sub_bits(bits):
+		"""NOT USED ANYMORE, possibly will be deleted"""
+
+		for s in product([False, True], repeat=len(bits)):
+
+			if any(map(lambda b: b[0] and (not b[1]), zip(s, bits))):
+				yield s
 
 
-	def __iter__(self):
-		return _NeighbourhoodIterator(self.s.copy(), self)
+	def neighbour_codes(self, k):
 
+		s = self.s
 
-	def __getitem__(self, i):
-		"""returns i-th neighbour
-		if not already calculated, 
-		then the iterator is called until neighbour is obtained
-		"""
-		if i < 0 or i >= self.s.N:
-			raise KeyError
+		for comb in combinations(range(s.N), k):
+
+			g = s.g
+
+			delta = 0
+			exists_false = False
+			for v in comb:
+
+				if g.vp.is_upgraded[v]:
+					delta -= g.vp.cost[v]
+
+				else:
+					exists_false = True
+					delta += g.vp.cost[v]
+
+			if s.running_cost + delta <= s.budget:
+
+				yield comb
+
+	def try_update(self, update_code):
+
+		s = self.s
+
+		for v in update_code:
+
+			if not s.g.vp.is_upgraded[v]:
+				s.upgrade_vertex_unsafe(v)
+			else:
+				s.downgrade_vertex(v)
+
+		obj_value = s.obj_value()
+
+		for v in update_code:
+
+			if not s.g.vp.is_upgraded[v]:
+				s.upgrade_vertex_unsafe(v)
+			else:
+				s.downgrade_vertex(v)
+
+		return obj_value
+
+	def update(self, update_code):
+
+		s = self.s
+ 
+		for v in update_code:
+
+			if not s.g.vp.is_upgraded[v]:
+				s.upgrade_vertex_unsafe(v)
+			else:
+				s.downgrade_vertex(v)
+
+		return s.obj_value()
+
+def first_improvement(N, k):
+
+	current_v = N.s.obj_value()
 		
-		if self._mem[i] != -1:
+	for c in N.neighbour_codes(k):
 
-			s_ = self.s.copy()
-			s_.upgrade_vertex(i)
+		v = N.try_update(c)
 
-			return s_
-		else:
-			it = iter(self)
+		if v < current_v:
 
-			while it.count < i:
-				next(it)
+			N.update(c)
+	
+			return True
 
-			return next(it).copy()
+	return False
