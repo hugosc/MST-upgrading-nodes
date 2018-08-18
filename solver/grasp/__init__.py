@@ -36,9 +36,9 @@ def grasp(solution, params, neigh, alpha=0.2, max_it=100):
 	sol = solution(*params)
 	opt = sol
 	while n_it < max_it:
-		print("Grasp iteration {}".format(n_it))
+		# print("Grasp iteration {}".format(n_it))
 		sol1 = build(sol, alpha)
-		print(sol1)
+		# print(sol1)
 		if opt._obj_value > sol1._obj_value:
 			opt = sol1
 		n_it += 1
