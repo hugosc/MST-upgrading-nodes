@@ -21,8 +21,8 @@ class Solution:
 		else:
 
 			self.g = g
-			self.running_cost = np.inner(g.vp.cost.get_array(), 
-				g.vp.is_upgraded.get_array())
+			#self.running_cost = np.inner(g.vp.cost.get_array(), 
+			#	g.vp.is_upgraded.get_array())
 
 		assert hasattr(self.g.vp, 'is_upgraded')
 		assert hasattr(self.g.vp, 'cost')
@@ -46,7 +46,9 @@ class Solution:
 
 
 	def copy(self):
-		return Solution(self.budget, g=self.g.copy())
+		s = Solution(self.budget, g=self.g.copy())
+		s.running_cost = self.running_cost
+		return s
 
 
 	"""objective function value: weight of MST"""
