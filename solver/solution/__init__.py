@@ -331,7 +331,8 @@ class Neighbourhood:
 def first_improvement(N, k):
 
 	current_v = N.s.obj_value()
-		
+	print("testing first_improvement")
+
 	for c in N.neighbour_codes(k):
 
 		v = N.try_update(c)
@@ -339,7 +340,7 @@ def first_improvement(N, k):
 		if v < current_v:
 
 			N.update(c)
-
+			print(N.s, "soll")
 			return True
 
 	return False
