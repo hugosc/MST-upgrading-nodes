@@ -20,25 +20,21 @@ def build(sol, alpha):
 
 
 
-def fimprov_local_search(sol, neigh):
-	"""BROKEN"""
-	it = neigh(sol)
-	for s in it:
-		if s._obj_value < sol._obj_value:
-			return s
+def fimprov_local_search(sol, neigh, k):
+	slt.first_improvement(neigh(sol), k)
 	return sol
 
 
 
 
-def grasp(solution, params, neigh, alpha=0.2, max_it=100):
+def grasp(solution, params, neigh, alpha=0.2, max_it=100, k=2):
 	n_it = 0
 	sol = solution(*params)
 	opt = sol
 	while n_it < max_it:
 		# print("Grasp iteration {}".format(n_it))
 		sol1 = build(sol, alpha)
-		# print(sol1)
+		slt.first_improvement(neigh(sol), k)
 		if opt._obj_value > sol1._obj_value:
 			opt = sol1
 		n_it += 1
