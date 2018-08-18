@@ -27,15 +27,32 @@ class SolutionGlobals:
 		assert hasattr(self.g.ep, 'all_weights')
 
 		self.N = self.g.num_vertices()
+		self.E = self.g.num_edges()
 		self.ewa = self.edge_weight_array()
 		self.v_cost = self.g.vp.cost.a
 		self.edges = self.g.get_edges()
 
 
+	# Gen array of edge weights with dimension (e,3).
+	#  Note: duplicate information from edges to make it faster
+	def edge_weight_array(self):
+		ewa = np.zeros((2 * self.g.num_edges(), 3))
+		edges = self.g.get_edges()
+		e_len = self.g.num_edges()
+		i = 0
+		for e in edges:
+			edge = self.g.edge(e[0], e[1])
+			ewa[i] = np.array(self.g.ep.all_weights[edge])
+			ewa[i + e_len] = np.array(self.g.ep.all_weights[edge])
+			i += 1
+		return ewa
+
+
 class Solution:
 
 
-	def __init__(self, budget, filepath=None, sol_globals):
+	def __init__(self, budget=None, filepath=None, g=None, sol_globals=None, 
+				 sol_state=None):
 
 		# everything that must be done ONLY once goes to globals
 		if sol_globals is not None:
@@ -43,13 +60,16 @@ class Solution:
 		else:
 			self.globals = SolutionGlobals(budget, filepath, g)
 
-		self.upgraded = self.gp.vp.is_upgraded.a
-		self.running_cost = np.inner(self.globals.v_cost,
-				self.upgraded.get_array())
+		if sol_state is not None:
+			self.upgraded = sol_state
+		else:
+			self.upgraded = self.globals.g.vp.is_upgraded.a
 
+		self.running_cost = np.inner(self.globals.v_cost,
+				self.upgraded)
 
 		self.cur_edge_weight = self.get_edge_weights()
-		self.edge_upgrade_level = np.zeros(len(cur_edge_weight), dtype=int)
+		self.edge_upgrade_level = np.zeros(len(self.cur_edge_weight), dtype=int)
 
 		self._update_mst()
 		self.atualize_allowed_upgrades()
@@ -59,20 +79,18 @@ class Solution:
 	#  find current edge weight values.
 	def get_edge_weights(self):
 		edges = self.globals.edges
-		return self.globals.ewa[:,
-			self.upgrade[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
+		return self.globals.ewa[np.arange(self.globals.E, dtype=int),
+		self.upgraded[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
 
-
-	def atualize_current_edge_weight(self, v):
 
 
 	def __str__(self):
-		arr = self.g.vp.is_upgraded.get_array()
+		arr = self.upgraded
 		return '{}, with obj_value {}'.format(arr, self.obj_value())
 
 
 	def copy(self):
-		return Solution(self.budget, g=self.g.copy())
+		return Solution(sol_globals=self.globals)
 
 
 	"""objective function value: weight of MST"""
@@ -81,95 +99,44 @@ class Solution:
 
 
 	# Assumes you know what you're doing. Performs both upgrade and downgrade
-	#  using mode selection
+	#  using mode selection.
 	def fast_v_upgrade(self, v, mode=True):
 		inc_mult = (mode * 1) + (not mode * -1)
-		v_cost = g.vp.cost[v]
+		v_cost = self.globals.v_cost[v]
 
-		self.fast_weight_update(v, inc)
+		self.fast_weight_update(v, inc_mult)
 
 		self.upgraded[v] = mode
-		self.running_cost += inc_mult *v_cost
+		self.running_cost += inc_mult * v_cost
 
 		self._update_mst()
 		self.atualize_allowed_upgrades()
 
 
 	def fast_weight_update(self, v, inc=1):
-		e_indexes = self.edges[:, 2][np.logical_or(
-			self.edges[:,0] == v,
-			self.edges[:, 1] == v)]
+		e_indexes = self.globals.edges[:, 2][np.logical_or(
+			self.globals.edges[:,0] == v,
+			self.globals.edges[:, 1] == v)]
 		self.edge_upgrade_level[e_indexes] += inc
-		self.cur_edge_weight[e_indexes] = self.ewa[e_indexes, 
+		self.cur_edge_weight[e_indexes] = self.globals.ewa[e_indexes, 
 			self.edge_upgrade_level[e_indexes]]
 
 
 
 	def upgrade_vertex(self, v):
 
-		g = self.g
-
-		v = g.vertex(v)
-
-		v_cost = g.vp.cost[v]
-
-		if not g.vp.is_upgraded[v] and \
-		self.running_cost + v_cost <= self.budget:
-
-			g.vp.is_upgraded[v] = True
-
-			for e in v.all_edges():
-				
-				all_weights = g.ep.all_weights[e]
-
-				w = e.target()
-
-				if g.vp.is_upgraded[w]:
-					g.ep.weight[e] = all_weights[2]
-				else:
-					g.ep.weight[e] = all_weights[1] 
-
-			self.running_cost += v_cost
-
-			self._update_mst()
-
-			self.atualize_allowed_upgrades()
-
+		if not self.upgraded[v] and \
+		self.running_cost + self.globals.v_cost[v] <= self.globals.budget:
+			self.fast_v_upgrade(v)
 			return True
-		
-		return False
 
+		return False
 
 	def downgrade_vertex(self, v):
 
-		g = self.g
-
-		v = g.vertex(v)
-
-		v_cost = g.vp.cost[v]
-
-		if g.vp.is_upgraded[v]:
-
-			g.vp.is_upgraded[v] = False
-
-			for e in v.all_edges():
-				
-				all_weights = g.ep.all_weights[e]
-
-				w = e.target()
-
-				if g.vp.is_upgraded[w]:
-					g.ep.weight[e] = all_weights[1]
-				else:
-					g.ep.weight[e] = all_weights[0] 
-
-			self.running_cost -= v_cost
-
-			self._update_mst()
-
-			self.atualize_allowed_upgrades()
-
-			return True	
+		if self.upgraded[v]:
+			self.fast_v_upgrade[v, False]
+			return True
 
 		return False
 
@@ -189,7 +156,7 @@ class Solution:
 	def atualize_allowed_upgrades(self):
 		self.to_upg = np.logical_and(
 			np.logical_not(self.upgraded),
-			self.v_cost <= (self.budget - self.running_cost))
+			self.globals.v_cost <= (self.globals.budget - self.running_cost))
 
 
 	def available_vertices(self):
@@ -199,20 +166,6 @@ class Solution:
 	def is_saturated(self):
 		return self.available_vertices() == 0
 
-
-	# Gen array of edge weights with dimension (e,3).
-	#  Note: duplicate information from edges to make it faster
-	def edge_weight_array(self):
-		ewa = np.zeros((2 * self.g.num_edges(), 3))
-		edges = self.g.get_edges()
-		e_len = self.g.num_edges()
-		i = 0
-		for e in edges:
-			edge = self.g.edge(e[0], e[1])
-			ewa[i] = np.array(self.g.ep.all_weights[edge])
-			ewa[i + e_len] = np.array(self.g.ep.all_weights[edge])
-			i += 1
-		return ewa
 
 
 	# Compute current min_spam_tree upgrade cost per weight varition per vertex
@@ -235,7 +188,7 @@ class Solution:
 		edges = np.concatenate((edges[:,:2][e_to_upg_1], 
 			edges[:,-2::-1][e_to_upg_2]))
 		weights = np.concatenate((weights[e_to_upg_1], weights[e_to_upg_2]))
-		delta = weights - self.ewa[e_indexes,
+		delta = weights - self.globals.ewa[e_indexes,
 		 self.to_upg[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
 
 		# graph undirected -> edges needs to be accounted for both vertices
@@ -243,13 +196,14 @@ class Solution:
 			edges[:,0],
 			delta,
 			statistic=np.sum,
-			bins=np.append(np.arange(self.N)[self.to_upg], [self.N + 1]))
+			bins=np.append(np.arange(self.globals.N)[self.to_upg],
+				[self.globals.N + 1]))
 
 		# maybe pure python will prove not effective
 		# how much you spent per upgrade unit
 		# print(np.column_stack((self.v_cost[self.to_upg] / delta[0], 
 		# 		delta[1][:-1])))
-		return np.column_stack((self.v_cost[self.to_upg] / delta[0], 
+		return np.column_stack((self.globals.v_cost[self.to_upg] / delta[0], 
 				delta[1][:-1]))
 
 
@@ -268,14 +222,14 @@ class _NeighbourhoodIterator:
 
 	def __next__(self):
 
-		if self.i < self.s.N:
+		if self.i < self.s.globals.N:
 
 			if self.i >= 0:
 				self.s.downgrade_vertex(self.i)
 
 			self.i += 1
 
-			while self.i < self.s.N:
+			while self.i < self.s.globals.N:
 
 				if self.s.upgrade_vertex(self.i):
 					self.neigh._mem[self.count] = self.i
@@ -293,7 +247,7 @@ class Neighbourhood:
 	"""Very basic neighbourhood for validation purposes"""
 	def __init__(self, s):
 		self.s = s
-		self._mem = [-1] * s.N
+		self._mem = [-1] * s.globals.N
 
 
 	def __iter__(self):
@@ -305,7 +259,7 @@ class Neighbourhood:
 		if not already calculated, 
 		then the iterator is called until neighbour is obtained
 		"""
-		if i < 0 or i >= self.s.N:
+		if i < 0 or i >= self.s.globals.N:
 			raise KeyError
 		
 		if self._mem[i] != -1:
