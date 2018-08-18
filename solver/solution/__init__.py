@@ -234,8 +234,9 @@ class _NeighbourhoodIterator:
 			self.i += 1
 
 			while self.i < self.s.globals.N:
-
+				print("iterating 1")
 				if self.s.upgrade_vertex(self.i):
+					print("iterating 2")
 					self.neigh._mem[self.count] = self.i
 					self.count += 1
 					return self.s
