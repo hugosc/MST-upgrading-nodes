@@ -65,9 +65,7 @@ class Solution:
 		else:
 			self.upgraded = self.globals.g.vp.is_upgraded.a
 
-		self.running_cost = np.inner(self.globals.v_cost,
-				self.upgraded)
-
+		self.running_cost = np.inner(self.globals.v_cost,self.upgraded)
 		self.cur_edge_weight = self.get_edge_weights()
 		self.edge_upgrade_level = np.zeros(len(self.cur_edge_weight), dtype=int)
 
@@ -83,6 +81,13 @@ class Solution:
 		self.upgraded[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
 
 
+	def cleanse(self):
+		self.upgraded = np.zeros(self.globals.N, dtype=bool)
+		self.running_cost = 0
+		self.cur_edge_weight = self.get_edge_weights()
+		self.edge_upgrade_level = np.zeros(len(self.cur_edge_weight), dtype=int)
+		self._update_mst()
+		self.atualize_allowed_upgrades()
 
 	def __str__(self):
 		arr = self.upgraded
@@ -90,7 +95,7 @@ class Solution:
 
 
 	def copy(self):
-		return Solution(sol_globals=self.globals)
+		return Solution(sol_globals=self.globals, sol_state=self.upgraded)
 
 
 	"""objective function value: weight of MST"""
@@ -144,12 +149,11 @@ class Solution:
 	def _update_mst(self):
 
 		g = self.globals.g
-
+		g.ep.weight.a = self.cur_edge_weight
 		self.mst = min_spanning_tree(g, g.ep.weight)
 
 		self._obj_value = sum(
-			map(lambda e: g.ep.weight[e] * self.mst[e], g.edges())
-		)
+			map(lambda e: g.ep.weight[e] * self.mst[e], g.edges()))
 
 
 	# Compute which vertices are still able to be updated

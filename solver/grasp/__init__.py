@@ -15,6 +15,7 @@ def select_candidate(sol, alpha):
 
 def build(sol, alpha):
 	s = sol.copy()
+	s.cleanse()
 	print("building")
 	while not s.is_saturated():
 		u = select_candidate(s, alpha)
@@ -32,16 +33,14 @@ def fimprov_local_search(sol, neigh):
 
 
 
-def grasp(solution, params, neigh, alpha=0.2, max_it=100):
+def grasp(solution, params, neigh, alpha=0.4, max_it=100):
 	n_it = 0
 	sol = solution(*params)
 	opt = sol
 	while n_it < max_it:
 		print("Grasp iteration {}".format(n_it))
 		sol1 = fimprov_local_search(build(sol, alpha), neigh)
-		print(sol1)
 		if opt._obj_value > sol1._obj_value:
 			opt = sol1
 		n_it += 1
-	# print(opt)
 	return opt
