@@ -148,7 +148,7 @@ class Solution:
 
 		if not self.upgraded[v] and \
 		self.running_cost + self.globals.v_cost[v] <= self.globals.budget:
-			self.fast_v_upgrade(v)
+			self.fast_v_upgrade(v, update_mst=update_mst)
 			return True
 
 		return False
@@ -157,44 +157,15 @@ class Solution:
 	def downgrade_vertex(self, v, update_mst=False):
 
 		if self.upgraded[v]:
-			self.fast_v_upgrade[v, False]
+			self.fast_v_upgrade(v, mode=False, update_mst=update_mst)
 			return True
 		return False
 
 
 	def upgrade_vertex_unsafe(self, v, update_mst=False):
 
-		g = self.g
-
-		v = g.vertex(v)
-
-		v_cost = g.vp.cost[v]
-
-		if not g.vp.is_upgraded[v]:
-
-			g.vp.is_upgraded[v] = True
-
-			for e in v.all_edges():
-				
-				all_weights = g.ep.all_weights[e]
-
-				w = e.target()
-
-				if g.vp.is_upgraded[w]:
-					g.ep.weight[e] = all_weights[2]
-				else:
-					g.ep.weight[e] = all_weights[1] 
-
-			self.running_cost += v_cost
-
-			if update_mst:
-				self._update_mst()
-			else:
-				self._DIRTY = True
-
-
-			self.atualize_allowed_upgrades()
-
+		if not self.upgraded[v]:
+			self.fast_v_upgrade(v, mode=True, update_mst=update_mst)
 			return True
 		return False
 
