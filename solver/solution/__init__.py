@@ -92,8 +92,10 @@ class Solution:
 		self.running_cost = 0
 		self.cur_edge_weight = self.get_edge_weights()
 		self.edge_upgrade_level = np.zeros(len(self.cur_edge_weight), dtype=int)
+		self._DIRTY = False
 		self._update_mst()
 		self.atualize_allowed_upgrades()
+
 
 	def __str__(self):
 		arr = self.upgraded
