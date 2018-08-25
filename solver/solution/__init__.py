@@ -196,7 +196,6 @@ class Solution:
 			self.atualize_allowed_upgrades()
 
 			return True
-		
 		return False
 
 
@@ -205,7 +204,7 @@ class Solution:
 		edge_weigth = self.globals.g.new_edge_property("double")
 		edge_weigth.a = self.cur_edge_weight
 
-		self.mst = min_spanning_tree(self.globals.g, edge_weigth.a)
+		self.mst = min_spanning_tree(self.globals.g, edge_weigth)
 		self._obj_value = self.total_tree_delay()
 
 
