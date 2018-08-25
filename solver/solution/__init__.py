@@ -5,48 +5,6 @@ from graph_tool.all import *
 from graph_tool.topology import min_spanning_tree
 from utils import load_instance
 
-class SolutionGlobals:
-
-	# everything that must be done ONLY once
-	def __init__(self, budget, filepath=None, g=None):
-
-		self.budget = budget
-		self.running_cost = 0
-		
-		assert filepath is not None or g is not None
-
-		if filepath is not None:
-
-			self.g = load_instance(filepath)
-		else:
-			self.g = g
-
-		assert hasattr(self.g.vp, 'is_upgraded')
-		assert hasattr(self.g.vp, 'cost')
-		assert hasattr(self.g.ep, 'weight')
-		assert hasattr(self.g.ep, 'all_weights')
-
-		self.N = self.g.num_vertices()
-		self.E = self.g.num_edges()
-		self.ewa = self.edge_weight_array()
-		self.v_cost = self.g.vp.cost.a
-		self.edges = self.g.get_edges()
-
-
-	# Gen array of edge weights with dimension (e,3).
-	#  Note: duplicate information from edges to make it faster
-	def edge_weight_array(self):
-		ewa = np.zeros((2 * self.g.num_edges(), 3))
-		edges = self.g.get_edges()
-		e_len = self.g.num_edges()
-		i = 0
-		for e in edges:
-			edge = self.g.edge(e[0], e[1])
-			ewa[i] = np.array(self.g.ep.all_weights[edge])
-			ewa[i + e_len] = np.array(self.g.ep.all_weights[edge])
-			i += 1
-		return ewa
-
 
 class Solution:
 
@@ -283,3 +241,46 @@ class Neighbourhood:
 				next(it)
 
 			return next(it).copy()
+
+
+class SolutionGlobals:
+
+	# everything that must be done ONLY once
+	def __init__(self, budget, filepath=None, g=None):
+
+		self.budget = budget
+		self.running_cost = 0
+		
+		assert filepath is not None or g is not None
+
+		if filepath is not None:
+
+			self.g = load_instance(filepath)
+		else:
+			self.g = g
+
+		assert hasattr(self.g.vp, 'is_upgraded')
+		assert hasattr(self.g.vp, 'cost')
+		assert hasattr(self.g.ep, 'weight')
+		assert hasattr(self.g.ep, 'all_weights')
+
+		self.N = self.g.num_vertices()
+		self.E = self.g.num_edges()
+		self.ewa = self.edge_weight_array()
+		self.v_cost = self.g.vp.cost.a
+		self.edges = self.g.get_edges()
+
+
+	# Gen array of edge weights with dimension (e,3).
+	#  Note: duplicate information from edges to make it faster
+	def edge_weight_array(self):
+		ewa = np.zeros((2 * self.g.num_edges(), 3))
+		edges = self.g.get_edges()
+		e_len = self.g.num_edges()
+		i = 0
+		for e in edges:
+			edge = self.g.edge(e[0], e[1])
+			ewa[i] = np.array(self.g.ep.all_weights[edge])
+			ewa[i + e_len] = np.array(self.g.ep.all_weights[edge])
+			i += 1
+		return ewa
