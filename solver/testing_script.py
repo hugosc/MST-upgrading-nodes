@@ -9,7 +9,7 @@ sol = Solution(40, f_p)
 # print(sol.vertex_impact_ratio_on_tree())
 
 from grasp import grasp
-opt = grasp(Solution, [40, f_p], Neighbourhood)
+opt = grasp(Solution, [400, f_p], Neighbourhood)
 # print(sol.g.vp.is_upgraded.a)
 
 # graph = utils.load_instance(f_p)

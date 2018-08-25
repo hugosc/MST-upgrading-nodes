@@ -8,11 +8,14 @@ def select_candidate(sol, alpha):
 	ratio = candidates[:,0]
 	d = alpha * np.ptp(ratio)
 	c_min = np.min(ratio)
+
+	# random uniform sample of rcl
 	return np.random.permutation(candidates[ratio <= c_min + d])[0]
 
 
 def build(sol, alpha):
 	s = sol.copy()
+	s.cleanse()
 	while not s.is_saturated():
 		u = select_candidate(s, alpha)
 		s.upgrade_vertex(int(u[1]), update_mst=True)
@@ -24,6 +27,7 @@ def fimprov_local_search(sol, neigh):
 	"""BROKEN"""
 	it = neigh(sol)
 	for s in it:
+		# print(s)
 		if s._obj_value < sol._obj_value:
 			return s
 	return sol
@@ -31,7 +35,7 @@ def fimprov_local_search(sol, neigh):
 
 
 
-def grasp(solution, params, neigh, alpha=0.2, max_it=100):
+def grasp(solution, params, neigh, alpha=0.4, max_it=100):
 	n_it = 0
 	sol = solution(*params)
 	opt = sol
