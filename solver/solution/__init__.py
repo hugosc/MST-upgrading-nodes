@@ -199,8 +199,6 @@ class Solution:
 
 
 	def _fast_update_mst_upgrade(self, v):
-		# edge_weigth = self.globals.g.new_edge_property("double")
-		# edge_weigth.a = self.cur_edge_weight
 		self.globals.g.ep.weight.a = self.cur_edge_weight
 
 		self.mst.a[self.globals.g.get_out_edges(v)[:, 2]] = True
@@ -210,6 +208,20 @@ class Solution:
 		self.globals.g.set_edge_filter(None)
 
 		self._obj_value = self.total_tree_delay()
+
+
+	def _batch_mst_update(self, vertices):
+		self.globals.g.ep.weight.a = self.cur_edge_weight
+
+		self.mst.a[np.array(
+			[self.globals.g.get_out_edges(v)[:, 2] for v in vertices])] = True
+
+		self.globals.g.set_edge_filter(self.mst)
+		self.mst = gt_min_spanning_tree(self.globals.g, self.globals.g.ep.weight)
+		self.globals.g.set_edge_filter(None)
+
+		self._obj_value = self.total_tree_delay()
+
 
 
 	def total_tree_delay(self):

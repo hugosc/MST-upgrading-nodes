@@ -16,7 +16,7 @@ def solve_for_multiple():
 	percentages = [0.1, 0.3, 0.5]
 	for p in percentages:
 		# print("percetage of total capacitance:" , p)
-		print(grasp(Solution, [lambda x: x * p, f_p, g], Neighbourhood))
+		print(grasp(Solution, [lambda x: x * p, f_p, g], Neighbourhood, max_it=2))
 
 
 cProfile.run('solve_for_multiple()', prof_f)
