@@ -53,6 +53,9 @@ def load_instance(filepath):
 	node_cost = g.new_vertex_property("float")
 
 	edge_weight = g.new_edge_property("float")
+	edge_weight_lv2 = g.new_edge_property("float")
+	edge_weight_lv3 = g.new_edge_property("float")
+
 	edge_upgradeable_weights = g.new_edge_property("vector<float>")
 
 	graph_total_cost = g.new_graph_property("float")
@@ -91,9 +94,8 @@ def load_instance(filepath):
 			w3 = float(tokens[4])
 
 			edge_weight[e] = w1
-			edge_upgradeable_weights[e] = [w1, w2, w3]
-
-			#print (v1, v2, w1, w2, w3)
+			edge_weight_lv2[e] = w2
+			edge_weight_lv3[e] = w3
 
 		# identify how weights are for vertices
 		line = f.readline()
@@ -125,7 +127,8 @@ def load_instance(filepath):
 	g.vp.is_upgraded   = node_upgraded
 	g.vp.cost          = node_cost
 	g.ep.weight        = edge_weight
-	g.ep.all_weights   = edge_upgradeable_weights
+	g.ep.weight_2      = edge_weight_lv2
+	g.ep.weight_3      = edge_weight_lv3
 
 	for v in g.vertices():
 		graph_total_cost[g] += node_cost[v]

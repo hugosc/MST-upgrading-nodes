@@ -25,7 +25,9 @@ class SolutionGlobals:
 		assert hasattr(self.g.vp, 'is_upgraded')
 		assert hasattr(self.g.vp, 'cost')
 		assert hasattr(self.g.ep, 'weight')
-		assert hasattr(self.g.ep, 'all_weights')
+		assert hasattr(self.g.ep, 'weight_2')
+		assert hasattr(self.g.ep, 'weight_3')
+
 
 		self.N = self.g.num_vertices()
 		self.E = self.g.num_edges()
@@ -38,18 +40,10 @@ class SolutionGlobals:
 	# Gen array of edge weights with dimension (e,3).
 	#  Note: duplicate information from edges to make it faster
 	def edge_weight_array(self):
-		ewa = np.zeros((2 * self.g.num_edges(), 3))
-		edges = self.g.get_edges()
-		e_len = self.g.num_edges()
-
-		i = 0
-		for e in edges:
-			edge = self.g.edge(e[0], e[1])
-			ewa[i] = np.array(self.g.ep.all_weights[edge])
-			ewa[i + e_len] = np.array(self.g.ep.all_weights[edge])
-			i += 1
-		return ewa
-
+		all_weights = np.column_stack((self.g.ep.weight.a,
+									   self.g.ep.weight_2.a,
+									   self.g.ep.weight_3.a))
+		return np.vstack((all_weights, all_weights))
 
 
 class Solution:
