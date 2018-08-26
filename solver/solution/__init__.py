@@ -200,8 +200,6 @@ class Solution:
 
 
 	def _fast_update_mst_upgrade(self, v):
-		# edge_weigth = self.globals.g.new_edge_property("double")
-		# edge_weigth.a = self.cur_edge_weight
 		self.globals.g.ep.weight.a = self.cur_edge_weight
 
 		self.mst.a[self.globals.g.get_out_edges(v)[:, 2]] = True
