@@ -234,7 +234,7 @@ class Solution:
 	def vertex_impact_ratio_on_tree(self):
 
 		on_mst = self.mst.a.astype(bool)
-		edges = self.globals.g.get_edges()[on_mst]
+		edges = self.globals.edges[on_mst]
 		weights = self.cur_edge_weight[on_mst]
 
 		e_to_upg_1 = self.to_upg[edges[:,0]]
