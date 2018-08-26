@@ -13,7 +13,7 @@ def select_candidate(sol, alpha):
 	c_max = np.max(ratio)
 
 	# random uniform sample of rcl
-	return np.random.permutation(candidates[ratio <= c_max - d])[0]
+	return np.random.permutation(candidates[ratio >= c_max - d])[0]
 
 
 def build(sol, alpha):
