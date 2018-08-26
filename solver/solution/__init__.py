@@ -134,13 +134,13 @@ class Solution:
 	#  to downgrade a non upgraded node or upgrade an already upgraded one.
 	#
 	def fast_v_upgrade(self, v, mode=True, update_mst=False):
-		inc_mult = (mode * 1) + ((not mode) * -1)
-		v_cost = self.globals.v_cost[v]
 
-		self.fast_weight_update(v, inc_mult)
+		inc_mult = (mode * 1) + ((not mode) * -1)
+
+		self.fast_weight_update(v, inc_mult) # calcula certo
 
 		self.upgraded[v] = mode
-		self.running_cost += inc_mult * v_cost
+		self.running_cost += inc_mult * self.globals.v_cost[v]
 
 		if update_mst:
 			self._update_mst()
@@ -160,7 +160,6 @@ class Solution:
 		self.edge_upgrade_level[e_indexes] += inc
 		self.cur_edge_weight[e_indexes] = self.globals.ewa[e_indexes, 
 			self.edge_upgrade_level[e_indexes]]
-
 
 
 	def upgrade_vertex(self, v, update_mst=False):
@@ -201,7 +200,7 @@ class Solution:
 
 
 	def total_tree_delay(self):
-		return np.sum(self.cur_edge_weight[self.mst.a])
+		return np.sum(self.cur_edge_weight[self.mst.a.astype(bool)])
 
 
 	def available_vertices_to_upgrade(self):

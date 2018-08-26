@@ -5,7 +5,6 @@ import graph_tool.all as gt
 from solution import Solution, Neighbourhood
 
 f_p = sys.argv[1]
-sol = Solution(40, f_p)
 # print(sol.vertex_impact_ratio_on_tree())
 
 from grasp import grasp
