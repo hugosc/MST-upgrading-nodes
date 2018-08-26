@@ -134,7 +134,7 @@ class Solution:
 	#  to downgrade a non upgraded node or upgrade an already upgraded one.
 	#
 	def fast_v_upgrade(self, v, mode=True, update_mst=False):
-		inc_mult = (mode * 1) + (not mode * -1)
+		inc_mult = (mode * 1) + ((not mode) * -1)
 		v_cost = self.globals.v_cost[v]
 
 		self.fast_weight_update(v, inc_mult)
@@ -218,6 +218,7 @@ class Solution:
 	#  performance from graph_tool documentation.
 	#
 	#  Note: iterating with iterators are slow compared to array operations.
+	#
 	def vertex_impact_ratio_on_tree(self):
 
 		on_mst = self.mst.a.astype(bool)
@@ -246,8 +247,6 @@ class Solution:
 
 		# maybe pure python will prove not effective
 		# how much you upgrade per unit spent
-		# print(np.column_stack((self.v_cost[self.to_upg] / delta[0], 
-		# 		delta[1][:-1])))
 		return np.column_stack((delta[0] / self.globals.v_cost[self.to_upg], 
 				delta[1][:-1]))
 
