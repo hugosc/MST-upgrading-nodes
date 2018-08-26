@@ -17,11 +17,10 @@ class SolutionGlobals:
 		
 		assert filepath is not None or g is not None
 
-		if filepath is not None:
-
-			self.g = load_instance(filepath)
-		else:
+		if g is not None:
 			self.g = g
+		else:
+			self.g = load_instance(filepath)
 
 		assert hasattr(self.g.vp, 'is_upgraded')
 		assert hasattr(self.g.vp, 'cost')
@@ -42,6 +41,7 @@ class SolutionGlobals:
 		ewa = np.zeros((2 * self.g.num_edges(), 3))
 		edges = self.g.get_edges()
 		e_len = self.g.num_edges()
+
 		i = 0
 		for e in edges:
 			edge = self.g.edge(e[0], e[1])
@@ -114,7 +114,7 @@ class Solution:
 
 	# Pretty print for solution state.
 	def __str__(self):
-		arr = self.upgraded
+		arr = self.upgraded.astype(int)
 		return '{}, with obj_value {}'.format(arr, self.obj_value())
 
 
@@ -143,13 +143,12 @@ class Solution:
 		inc_mult = (mode * 1) + ((not mode) * -1)
 
 		self.fast_weight_update(v, inc_mult) # calcula certo
-
 		self.upgraded[v] = mode
 		self.running_cost += inc_mult * self.globals.v_cost[v]
 
 		if update_mst:
 			# self.mst_update_func[mode](v)
-			self._update_mst(v)
+			self._fast_update_mst_upgrade(v)
 		else:
 			self._DIRTY = True
 
@@ -206,14 +205,14 @@ class Solution:
 
 
 	def _fast_update_mst_upgrade(self, v):
-		edge_weigth = self.globals.g.new_edge_property("double")
-		edge_weigth.a = self.cur_edge_weight
+		# edge_weigth = self.globals.g.new_edge_property("double")
+		# edge_weigth.a = self.cur_edge_weight
+		self.globals.g.ep.weight.a = self.cur_edge_weight
 
-		self.edge_filter.a = np.copy(self.mst.a.astype(bool))
-		self.edge_filter.a[self.globals.g.get_out_edges(v)[:, 2]] = True
+		self.mst.a[self.globals.g.get_out_edges(v)[:, 2]] = True
 
-		self.globals.g.set_edge_filter(self.edge_filter)
-		self.mst = gt_min_spanning_tree(self.globals.g, edge_weigth)
+		self.globals.g.set_edge_filter(self.mst)
+		self.mst = gt_min_spanning_tree(self.globals.g, self.globals.g.ep.weight)
 		self.globals.g.set_edge_filter(None)
 
 		self._obj_value = self.total_tree_delay()
