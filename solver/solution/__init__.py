@@ -13,7 +13,6 @@ class SolutionGlobals:
 	# everything that must be done ONLY once
 	def __init__(self, budget, filepath=None, g=None):
 
-		self.budget = budget
 		self.running_cost = 0
 		
 		assert filepath is not None or g is not None
@@ -33,6 +32,7 @@ class SolutionGlobals:
 		self.E = self.g.num_edges()
 		self.ewa = self.edge_weight_array()
 		self.v_cost = self.g.vp.cost.a
+		self.budget = budget(np.sum(self.v_cost))
 		self.edges = self.g.get_edges()
 
 
@@ -77,6 +77,11 @@ class Solution:
 
 		self._update_mst()
 		self.atualize_allowed_upgrades()
+
+		self.mst_update_func = {True: self._fast_update_mst_upgrade,
+								False: self._fast_update_mst_upgrade}
+
+		self.edge_filter = self.globals.g.new_edge_property("boolean")
 
 
 	# Compute which vertices are still able to be upgraded.
@@ -134,16 +139,17 @@ class Solution:
 	#  to downgrade a non upgraded node or upgrade an already upgraded one.
 	#
 	def fast_v_upgrade(self, v, mode=True, update_mst=False):
-		inc_mult = (mode * 1) + ((not mode) * -1)
-		v_cost = self.globals.v_cost[v]
 
-		self.fast_weight_update(v, inc_mult)
+		inc_mult = (mode * 1) + ((not mode) * -1)
+
+		self.fast_weight_update(v, inc_mult) # calcula certo
 
 		self.upgraded[v] = mode
-		self.running_cost += inc_mult * v_cost
+		self.running_cost += inc_mult * self.globals.v_cost[v]
 
 		if update_mst:
-			self._update_mst()
+			# self.mst_update_func[mode](v)
+			self._update_mst(v)
 		else:
 			self._DIRTY = True
 
@@ -160,7 +166,6 @@ class Solution:
 		self.edge_upgrade_level[e_indexes] += inc
 		self.cur_edge_weight[e_indexes] = self.globals.ewa[e_indexes, 
 			self.edge_upgrade_level[e_indexes]]
-
 
 
 	def upgrade_vertex(self, v, update_mst=False):
@@ -191,7 +196,7 @@ class Solution:
 		return False
 
 
-	def _update_mst(self):
+	def _update_mst(self, v=None):
 
 		edge_weigth = self.globals.g.new_edge_property("double")
 		edge_weigth.a = self.cur_edge_weight
@@ -200,8 +205,22 @@ class Solution:
 		self._obj_value = self.total_tree_delay()
 
 
+	def _fast_update_mst_upgrade(self, v):
+		edge_weigth = self.globals.g.new_edge_property("double")
+		edge_weigth.a = self.cur_edge_weight
+
+		self.edge_filter.a = np.copy(self.mst.a.astype(bool))
+		self.edge_filter.a[self.globals.g.get_out_edges(v)[:, 2]] = True
+
+		self.globals.g.set_edge_filter(self.edge_filter)
+		self.mst = gt_min_spanning_tree(self.globals.g, edge_weigth)
+		self.globals.g.set_edge_filter(None)
+
+		self._obj_value = self.total_tree_delay()
+
+
 	def total_tree_delay(self):
-		return np.sum(self.cur_edge_weight[self.mst.a])
+		return np.sum(self.cur_edge_weight[self.mst.a.astype(bool)])
 
 
 	def available_vertices_to_upgrade(self):
