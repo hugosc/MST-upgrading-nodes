@@ -10,6 +10,7 @@ from itertools import product, combinations
 
 class SolutionGlobals:
 
+
 	# everything that must be done ONLY once
 	def __init__(self, budget, filepath=None, g=None):
 
@@ -79,6 +80,13 @@ class Solution:
 		self.atualize_allowed_upgrades()
 
 
+	# Compute which vertices are still able to be upgraded.
+	def atualize_allowed_upgrades(self):
+		self.to_upg = np.logical_and(
+			np.logical_not(self.upgraded),
+			self.globals.v_cost <= (self.globals.budget - self.running_cost))
+
+
 	# Mix local information of upgraded vertices with global weight weights to
 	#  find current edge weight values.
 	def get_edge_weights(self):
@@ -87,6 +95,9 @@ class Solution:
 		self.upgraded[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
 
 
+	# Rewind the solution state to the initial one. All vertices are set to
+	#  downgrade and every solution state attribute is set as in object 
+	#  creation.
 	def cleanse(self):
 		self.upgraded = np.zeros(self.globals.N, dtype=bool)
 		self.running_cost = 0
@@ -97,11 +108,15 @@ class Solution:
 		self.atualize_allowed_upgrades()
 
 
+	# Pretty print for solution state.
 	def __str__(self):
 		arr = self.upgraded
 		return '{}, with obj_value {}'.format(arr, self.obj_value())
 
 
+	# Create a new solution passing a reference for 'globals' singleton and
+	#  reproducing the solution state of given vertices.
+	#
 	def copy(self):
 		return Solution(sol_globals=self.globals, sol_state=self.upgraded)
 
@@ -116,7 +131,9 @@ class Solution:
 
 
 	# Assumes you know what you're doing. Performs both upgrade and downgrade
-	#  using mode selection.
+	#  using mode selection. Gives speed assuming that it wont be called over
+	#  to downgrade a non upgraded node or upgrade an already upgraded one.
+	#
 	def fast_v_upgrade(self, v, mode=True, update_mst=False):
 		inc_mult = (mode * 1) + (not mode * -1)
 		v_cost = self.globals.v_cost[v]
@@ -134,6 +151,9 @@ class Solution:
 		self.atualize_allowed_upgrades()
 
 
+	# Control to change solution state of edge weights when a vertex is 
+	#  upgraded.
+	#
 	def fast_weight_update(self, v, inc=1):
 		e_indexes = self.globals.edges[:, 2][np.logical_or(
 			self.globals.edges[:,0] == v,
@@ -162,6 +182,8 @@ class Solution:
 		return False
 
 
+	# Upgrade a vertex even if the solution moves to an infeasible state.
+	#
 	def upgrade_vertex_unsafe(self, v, update_mst=False):
 
 		if not self.upgraded[v]:
@@ -183,19 +205,12 @@ class Solution:
 		return np.sum(self.cur_edge_weight[self.mst.a])
 
 
-	# Compute which vertices are still able to be updated
-	def atualize_allowed_upgrades(self):
-		self.to_upg = np.logical_and(
-			np.logical_not(self.upgraded),
-			self.globals.v_cost <= (self.globals.budget - self.running_cost))
-
-
-	def available_vertices(self):
+	def available_vertices_to_upgrade(self):
 		return np.sum(self.to_upg)
 
 
 	def is_saturated(self):
-		return self.available_vertices() == 0
+		return self.available_vertices_to_upgrade() == 0
 
 
 
