@@ -1,16 +1,19 @@
 __all__ = []
 
 import numpy as np
-import solution as slt
 
+
+# Select candidates in the RCS style. In this case, we want to find vertices
+#  which maximizes the ratio "sol_improv / cost".
+#
 def select_candidate(sol, alpha):
 	candidates = sol.vertex_impact_ratio_on_tree()
 	ratio = candidates[:,0]
 	d = alpha * np.ptp(ratio)
-	c_min = np.min(ratio)
+	c_max = np.max(ratio)
 
 	# random uniform sample of rcl
-	return np.random.permutation(candidates[ratio <= c_min + d])[0]
+	return np.random.permutation(candidates[ratio <= c_max - d])[0]
 
 
 def build(sol, alpha):

@@ -245,10 +245,10 @@ class Solution:
 				[self.globals.N + 1]))
 
 		# maybe pure python will prove not effective
-		# how much you spent per upgrade unit
+		# how much you upgrade per unit spent
 		# print(np.column_stack((self.v_cost[self.to_upg] / delta[0], 
 		# 		delta[1][:-1])))
-		return np.column_stack((self.globals.v_cost[self.to_upg] / delta[0], 
+		return np.column_stack((delta[0] / self.globals.v_cost[self.to_upg], 
 				delta[1][:-1]))
 
 
