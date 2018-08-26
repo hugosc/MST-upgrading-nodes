@@ -17,16 +17,17 @@ class SolutionGlobals:
 		
 		assert filepath is not None or g is not None
 
-		if filepath is not None:
-
-			self.g = load_instance(filepath)
-		else:
+		if g is not None:
 			self.g = g
+		else:
+			self.g = load_instance(filepath)
 
 		assert hasattr(self.g.vp, 'is_upgraded')
 		assert hasattr(self.g.vp, 'cost')
 		assert hasattr(self.g.ep, 'weight')
-		assert hasattr(self.g.ep, 'all_weights')
+		assert hasattr(self.g.ep, 'weight_2')
+		assert hasattr(self.g.ep, 'weight_3')
+
 
 		self.N = self.g.num_vertices()
 		self.E = self.g.num_edges()
@@ -39,17 +40,10 @@ class SolutionGlobals:
 	# Gen array of edge weights with dimension (e,3).
 	#  Note: duplicate information from edges to make it faster
 	def edge_weight_array(self):
-		ewa = np.zeros((2 * self.g.num_edges(), 3))
-		edges = self.g.get_edges()
-		e_len = self.g.num_edges()
-		i = 0
-		for e in edges:
-			edge = self.g.edge(e[0], e[1])
-			ewa[i] = np.array(self.g.ep.all_weights[edge])
-			ewa[i + e_len] = np.array(self.g.ep.all_weights[edge])
-			i += 1
-		return ewa
-
+		all_weights = np.column_stack((self.g.ep.weight.a,
+									   self.g.ep.weight_2.a,
+									   self.g.ep.weight_3.a))
+		return np.vstack((all_weights, all_weights))
 
 
 class Solution:
@@ -143,13 +137,12 @@ class Solution:
 		inc_mult = (mode * 1) + ((not mode) * -1)
 
 		self.fast_weight_update(v, inc_mult) # calcula certo
-
 		self.upgraded[v] = mode
 		self.running_cost += inc_mult * self.globals.v_cost[v]
 
 		if update_mst:
 			# self.mst_update_func[mode](v)
-			self._update_mst(v)
+			self._fast_update_mst_upgrade(v)
 		else:
 			self._DIRTY = True
 
@@ -206,14 +199,14 @@ class Solution:
 
 
 	def _fast_update_mst_upgrade(self, v):
-		edge_weigth = self.globals.g.new_edge_property("double")
-		edge_weigth.a = self.cur_edge_weight
+		# edge_weigth = self.globals.g.new_edge_property("double")
+		# edge_weigth.a = self.cur_edge_weight
+		self.globals.g.ep.weight.a = self.cur_edge_weight
 
-		self.edge_filter.a = np.copy(self.mst.a.astype(bool))
-		self.edge_filter.a[self.globals.g.get_out_edges(v)[:, 2]] = True
+		self.mst.a[self.globals.g.get_out_edges(v)[:, 2]] = True
 
-		self.globals.g.set_edge_filter(self.edge_filter)
-		self.mst = gt_min_spanning_tree(self.globals.g, edge_weigth)
+		self.globals.g.set_edge_filter(self.mst)
+		self.mst = gt_min_spanning_tree(self.globals.g, self.globals.g.ep.weight)
 		self.globals.g.set_edge_filter(None)
 
 		self._obj_value = self.total_tree_delay()
@@ -241,7 +234,7 @@ class Solution:
 	def vertex_impact_ratio_on_tree(self):
 
 		on_mst = self.mst.a.astype(bool)
-		edges = self.globals.g.get_edges()[on_mst]
+		edges = self.globals.edges[on_mst]
 		weights = self.cur_edge_weight[on_mst]
 
 		e_to_upg_1 = self.to_upg[edges[:,0]]

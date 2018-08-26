@@ -41,10 +41,11 @@ def fimprov_local_search(sol, neigh):
 def grasp(solution, params, neigh, alpha=0.4, max_it=1):
 	n_it = 0
 	sol = solution(*params)
-	opt = sol
+	opt =  sol
 	while n_it < max_it:
 		# print("Grasp iteration {}".format(n_it))
 		sol1 = build(sol, alpha)
+		
 		fimprov_local_search(sol1, neigh)
 
 		if opt._obj_value > sol1._obj_value:
