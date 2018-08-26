@@ -35,6 +35,7 @@ class SolutionGlobals:
 		self.v_cost = self.g.vp.cost.a
 		self.budget = budget(np.sum(self.v_cost))
 		self.edges = self.g.get_edges()
+		self.v_degree = self.g.get_out_degrees(self.g.get_vertices())
 
 
 	# Gen array of edge weights with dimension (e,3).
@@ -249,18 +250,20 @@ class Solution:
 		delta = weights - self.globals.ewa[e_indexes,
 		 self.to_upg[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
 
-		# graph undirected -> edges needs to be accounted for both vertices
-		delta = binned_statistic(
-			edges[:,0],
-			delta,
-			statistic=np.sum,
-			bins=np.append(np.arange(self.globals.N)[self.to_upg],
-				[self.globals.N + 1]))
+		# compute delta for each edge and sort result by vertex label of first
+		#  vertex on the edge(u in (u ,v))
+		edge_impact = np.column_stack((edges, delta))
+		edge_impact = edge_impact[edge_impact[:,0].argsort()]
+		edge_impact[:, 2] = np.cumsum(edge_impact[:,2])
 
-		# maybe pure python will prove not effective
-		# how much you upgrade per unit spent
-		return np.column_stack((delta[0] / self.globals.v_cost[self.to_upg], 
-				delta[1][:-1]))
+		selector = np.cumsum(
+			np.unique(edge_impact[:,0].astype(int), return_counts=True)[1]) - 1
+
+		impact = edge_impact[selector, 2] - np.concatenate(
+			([0], edge_impact[selector[:-1], 2]))
+
+		return np.column_stack((impact / self.globals.v_cost[self.to_upg],
+			   np.arange(self.globals.N)[self.to_upg]))
 
 
 class Neighbourhood:
