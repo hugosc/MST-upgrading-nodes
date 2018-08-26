@@ -11,9 +11,8 @@ class SolutionGlobals:
 
 
 	# everything that must be done ONLY once
-	def __init__(self, budget, filepath=None, g=None):
+	def __init__(self, budget_percentage, filepath=None, g=None):
 
-		self.budget = budget
 		self.running_cost = 0
 		
 		assert filepath is not None or g is not None
@@ -33,6 +32,7 @@ class SolutionGlobals:
 		self.E = self.g.num_edges()
 		self.ewa = self.edge_weight_array()
 		self.v_cost = self.g.vp.cost.a
+		self.budget = np.sum(self.v_cost) * budget_percentage
 		self.edges = self.g.get_edges()
 
 
