@@ -1,6 +1,7 @@
 __all__ = []
 
 import numpy as np
+from solution import first_improvement
 
 
 # Select candidates in the RCS style. In this case, we want to find vertices
@@ -28,11 +29,10 @@ def build(sol, alpha):
 
 def fimprov_local_search(sol, neigh):
 	"""BROKEN"""
-	it = neigh(sol)
-	for s in it:
-		# print(s)
-		if s._obj_value < sol._obj_value:
-			return s
+	N = neigh(sol)
+	while first_improvement(N, 2):
+		pass
+		
 	return sol
 
 
@@ -45,7 +45,8 @@ def grasp(solution, params, neigh, alpha=0.4, max_it=1):
 	while n_it < max_it:
 		# print("Grasp iteration {}".format(n_it))
 		sol1 = build(sol, alpha)
-		# print(sol1)
+		fimprov_local_search(sol1, neigh)
+
 		if opt._obj_value > sol1._obj_value:
 			opt = sol1
 		n_it += 1

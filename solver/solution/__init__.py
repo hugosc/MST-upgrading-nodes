@@ -114,7 +114,7 @@ class Solution:
 
 	# Pretty print for solution state.
 	def __str__(self):
-		arr = self.upgraded
+		arr = self.upgraded.astype(int)
 		return '{}, with obj_value {}'.format(arr, self.obj_value())
 
 
