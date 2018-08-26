@@ -1,8 +1,7 @@
 import numpy as np
 from scipy.stats import binned_statistic
 
-from graph_tool.all import *
-from graph_tool.topology import min_spanning_tree
+from graph_tool.topology import min_spanning_tree as gt_min_spanning_tree
 from utils import load_instance
 
 from itertools import product, combinations
@@ -197,7 +196,7 @@ class Solution:
 		edge_weigth = self.globals.g.new_edge_property("double")
 		edge_weigth.a = self.cur_edge_weight
 
-		self.mst = min_spanning_tree(self.globals.g, edge_weigth)
+		self.mst = gt_min_spanning_tree(self.globals.g, edge_weigth)
 		self._obj_value = self.total_tree_delay()
 
 
