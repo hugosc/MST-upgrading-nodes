@@ -268,8 +268,8 @@ class Neighbourhood:
 	def neighbour_codes(self, k):
 
 		s = self.s
-
-		for comb in combinations(range(s.N), k):
+		N = s.globals.N
+		for comb in combinations(range(N), k):
 
 			delta = 0
 			exists_false = False
@@ -282,7 +282,7 @@ class Neighbourhood:
 					exists_false = True # TODO: never used variable
 					delta += s.globals.v_cost[v]
 
-			if s.running_cost + delta <= s.globals.budget:
+			if s.running_cost + delta <= s.globals.budget and exists_false:
 				yield comb
 
 
@@ -299,12 +299,12 @@ class Neighbourhood:
 
 		obj_value = s.obj_value()
 
-		# for v in update_code: # TODO: check if duplicated
+		for v in update_code:
 
-		# 	if not s.upgraded[v]:
-		# 		s.upgrade_vertex_unsafe(v)
-		# 	else:
-		# 		s.downgrade_vertex(v)
+			if not s.upgraded[v]:
+				s.upgrade_vertex_unsafe(v)
+			else:
+				s.downgrade_vertex(v)
 
 		return obj_value
 
