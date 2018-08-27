@@ -349,8 +349,8 @@ class Solution:
 		n_of_inacs = n_total - n_of_acs
 
 		return np.concatenate((
-							   np.random.shuffle(v[not self.to_upg])[n_of_acs],
-							   np.random.shuffle(v[self.to_upg])[n_of_inacs]))
+							   np.random.shuffle(v[self.upgraded])[n_of_acs],
+							   np.random.shuffle(v[not self.upgraded])[n_of_inacs]))
 
 
 class Neighbourhood:
