@@ -6,6 +6,11 @@ from utils import load_instance
 
 from itertools import product, combinations
 
+_01 = lambda x: 0.1*x
+_03 = lambda x: 0.3*x
+_04 = lambda x: 0.4*x
+_05 = lambda x: 0.5*x
+_09 = lambda x: 0.9*x
 
 class SolutionGlobals:
 
@@ -91,7 +96,7 @@ class Solution:
 	#  as in object creation. The safe parameter can be used to cleanse to a
 	#  forbidden state.
 	#
-	def cleanse_to_state(self, state=None, safe=True):
+	def cleanse_to_state(self, state=None, safe=True, mst=None):
 		upg = state
 		if upg is None:
 			upg = np.zeros(self.globals.N, dtype=bool)
@@ -105,7 +110,7 @@ class Solution:
 		self.cur_edge_weight = self.get_edge_weights()
 		self.edge_upgrade_level = self.compute_edge_upgrade_level()
 		self._DIRTY = False
-		self._update_mst()
+		self._update_mst(mst=mst)
 		self.atualize_allowed_upgrades()
 
 		return True
@@ -249,12 +254,16 @@ class Solution:
 		return False
 
 
-	def _update_mst(self, v=None):
+	def _update_mst(self, v=None, mst=None):
 
-		edge_weight = self.globals.g.new_edge_property("double")
-		edge_weight.a = self.cur_edge_weight
+		if mst is not None:
+			self.mst = mst
+		else:
+			edge_weight = self.globals.g.new_edge_property("double")
+			edge_weight.a = self.cur_edge_weight
 
-		self.mst = gt_min_spanning_tree(self.globals.g, edge_weight)
+			self.mst = gt_min_spanning_tree(self.globals.g, edge_weight)
+
 		self._obj_value = self.total_tree_delay()
 
 
@@ -344,15 +353,19 @@ class Solution:
 	#
 	def random_perturbation_candidates(self, n_actives, n_inactives, n_total):
 		v = np.arange(self.globals.N)
-		n_of_acs = n_actives + np.random_integers(
+		n_of_acs = n_actives + np.random.random_integers(
 			n_total - n_actives - n_inactives)
 		n_of_inacs = n_total - n_of_acs
 
-		return np.concatenate((
-							   np.random.shuffle(
-							   	v[self.upgraded])[n_of_acs],
-							   np.random.shuffle(
-							   	v[np.logical_not(self.upgraded)])[n_of_inacs]))
+		acs = np.random.choice(
+			v[self.upgraded.astype(bool)], 
+			size=n_of_acs, replace=False)
+
+		inacs = np.random.choice(
+			v[np.logical_not(self.upgraded.astype(bool))], 
+			size=n_of_inacs, replace=False)
+
+		return np.concatenate((acs, inacs))
 
 
 class Neighbourhood:
