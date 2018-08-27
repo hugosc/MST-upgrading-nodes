@@ -6,6 +6,11 @@ from utils import load_instance
 
 from itertools import product, combinations
 
+_01 = lambda x: 0.1*x
+_03 = lambda x: 0.3*x
+_04 = lambda x: 0.4*x
+_05 = lambda x: 0.5*x
+_09 = lambda x: 0.9*x
 
 class SolutionGlobals:
 
@@ -64,19 +69,11 @@ class Solution:
 		else:
 			self.upgraded = self.globals.g.vp.is_upgraded.a
 
-		self._DIRTY = False
-
-		self.running_cost = np.inner(self.globals.v_cost,self.upgraded)
-		self.cur_edge_weight = self.get_edge_weights()
-		self.edge_upgrade_level = np.zeros(len(self.cur_edge_weight), dtype=int)
-
-		self._update_mst()
-		self.atualize_allowed_upgrades()
-
-		self.mst_update_func = {True: self._fast_update_mst_upgrade,
-								False: self._fast_update_mst_upgrade}
+		self.cleanse_to_state(self.upgraded)
 
 		self.edge_filter = self.globals.g.new_edge_property("boolean")
+		self.mst_update_func = {True: self._fast_update_mst_upgrade,
+								False: self._fast_update_mst_upgrade}
 
 
 	# Compute which vertices are still able to be upgraded.
@@ -91,33 +88,56 @@ class Solution:
 	def get_edge_weights(self):
 		edges = self.globals.edges
 		return self.globals.ewa[np.arange(self.globals.E, dtype=int),
-		self.upgraded[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
+			self.upgraded[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
 
 
-	# Rewind the solution state to the initial one. All vertices are set to
-	#  downgrade and every solution state attribute is set as in object 
-	#  creation.
-	def cleanse(self):
-		self.upgraded = np.zeros(self.globals.N, dtype=bool)
-		self.running_cost = 0
+	# Rewind the solution state to a given state. When state is None, all 
+	#  vertices are set to downgrade and every solution state attribute is set 
+	#  as in object creation. The safe parameter can be used to cleanse to a
+	#  forbidden state.
+	#
+	def cleanse_to_state(self, state=None, safe=True, mst=None):
+		upg = state
+		if upg is None:
+			upg = np.zeros(self.globals.N, dtype=bool)
+
+		r_cost = np.inner(self.globals.v_cost, upg)
+		if safe and r_cost > self.globals.budget:
+			return False
+
+		self.upgraded = upg
+		self.running_cost = np.inner(self.globals.v_cost, self.upgraded)
 		self.cur_edge_weight = self.get_edge_weights()
-		self.edge_upgrade_level = np.zeros(len(self.cur_edge_weight), dtype=int)
+		self.edge_upgrade_level = self.compute_edge_upgrade_level()
 		self._DIRTY = False
-		self._update_mst()
+		self._update_mst(mst=mst)
 		self.atualize_allowed_upgrades()
+
+		return True
+
+
+	# Find edge upgrade level for current solution state. The incremental
+	#  operation performed by fast_weight_update is more performatic when it
+	#  can be done.
+	#
+	def compute_edge_upgrade_level(self):
+		return self.upgraded[self.globals.edges[:,0]].astype(int) \
+				+ self.upgraded[self.globals.edges[:,1]]
 
 
 	# Pretty print for solution state.
 	def __str__(self):
 		arr = self.upgraded.astype(int)
-		return '{}, with obj_value {}'.format(arr, self.obj_value())
+		return '{}, with obj_value {} and cost {}'.format(
+			arr, self.obj_value(), self.running_cost)
 
 
 	# Create a new solution passing a reference for 'globals' singleton and
 	#  reproducing the solution state of given vertices.
 	#
 	def copy(self):
-		return Solution(sol_globals=self.globals, sol_state=self.upgraded)
+		return Solution(sol_globals=self.globals, 
+			sol_state=np.copy(self.upgraded))
 
 
 	"""objective function value: weight of MST"""
@@ -137,8 +157,8 @@ class Solution:
 
 		inc_mult = (mode * 1) + ((not mode) * -1)
 
-		self.fast_weight_update(v, inc_mult) # calcula certo
 		self.upgraded[v] = mode
+		self.fast_weight_update(v, inc_mult)
 		self.running_cost += inc_mult * self.globals.v_cost[v]
 
 		if update_mst:
@@ -162,6 +182,32 @@ class Solution:
 			self.edge_upgrade_level[e_indexes]]
 
 
+	# Batch version of fast_weight_update. Accepts a list of vertices. Works for
+	#  increment, decrement of a mix of both, since will compute the levels 
+	#  based on 'self.upgraded'.
+	#
+	def batch_weight_update(self, vertices):
+		e_indexes = np.array([], dtype=int)
+
+		# TODO: edges might come more than once on this iteration. Since the 
+		#  value is being set in a compliant way, this isn't a problem for 
+		#  correctness.
+		for v in vertices:
+			e_indexes = np.concatenate((
+				e_indexes, 
+				(self.globals.edges[:, 2][np.logical_or(
+					self.globals.edges[:,0] == v,
+					self.globals.edges[:, 1] == v)]).astype(int)))
+
+
+		self.edge_upgrade_level[e_indexes] = \
+			self.upgraded[self.globals.edges[e_indexes, 0]].astype(int) +\
+			self.upgraded[self.globals.edges[e_indexes, 1]]
+
+		self.cur_edge_weight[e_indexes] = self.globals.ewa[e_indexes, 
+			self.edge_upgrade_level[e_indexes]]
+
+
 	def upgrade_vertex(self, v, update_mst=False):
 
 		if not self.upgraded[v] and \
@@ -170,6 +216,28 @@ class Solution:
 			return True
 
 		return False
+
+
+	# Batch upgrade of vertices. If the update_mst flag is unset, MST update
+	#  will not achieve the speed up of "_batch_mst_update". This function only
+	#  works for explicitly upgrades, vertex downgrades must be done with
+	#  'cleanse_state' since MST will have to be rerun for all edges.
+	#
+	def batch_vertex_upgrade(self, vertices, update_mst=False):
+		if not len(vertices):
+			return
+
+		self.upgraded[vertices] = True
+		self.batch_weight_update(vertices)
+		self.running_cost += np.sum(self.globals.v_cost[vertices])
+
+		if update_mst:
+			self._batch_mst_update(vertices)
+		else:
+			self._DIRTY = True
+
+		self.atualize_allowed_upgrades()
+
 
 
 	def downgrade_vertex(self, v, update_mst=False):
@@ -190,12 +258,16 @@ class Solution:
 		return False
 
 
-	def _update_mst(self, v=None):
+	def _update_mst(self, v=None, mst=None):
 
-		edge_weigth = self.globals.g.new_edge_property("double")
-		edge_weigth.a = self.cur_edge_weight
+		if mst is not None:
+			self.mst = mst
+		else:
+			edge_weight = self.globals.g.new_edge_property("double")
+			edge_weight.a = self.cur_edge_weight
 
-		self.mst = gt_min_spanning_tree(self.globals.g, edge_weigth)
+			self.mst = gt_min_spanning_tree(self.globals.g, edge_weight)
+
 		self._obj_value = self.total_tree_delay()
 
 
@@ -209,6 +281,20 @@ class Solution:
 		self.globals.g.set_edge_filter(None)
 
 		self._obj_value = self.total_tree_delay()
+
+
+	def _batch_mst_update(self, vertices):
+		self.globals.g.ep.weight.a = self.cur_edge_weight
+
+		self.mst.a[np.concatenate(np.array(
+			[self.globals.g.get_out_edges(v)[:, 2] for v in vertices]))] = True
+
+		self.globals.g.set_edge_filter(self.mst)
+		self.mst = gt_min_spanning_tree(self.globals.g, self.globals.g.ep.weight)
+		self.globals.g.set_edge_filter(None)
+
+		self._obj_value = self.total_tree_delay()
+
 
 
 	def total_tree_delay(self):
@@ -264,6 +350,28 @@ class Solution:
 			   np.arange(self.globals.N)[self.to_upg]))
 
 
+
+	# Generate a list of candidate vertices to act as perturbation points of the
+	#  solution. Chooses 'n_total' vertices randomly, altough guarantees
+	#  that 'n_actives' to be upgraded and 'n_incatives' to not.
+	#
+	def random_perturbation_candidates(self, n_actives, n_inactives, n_total):
+		v = np.arange(self.globals.N)
+		n_of_acs = n_actives + np.random.random_integers(
+			n_total - n_actives - n_inactives)
+		n_of_inacs = n_total - n_of_acs
+
+		acs = np.random.choice(
+			v[self.upgraded.astype(bool)], 
+			size=n_of_acs, replace=False)
+
+		inacs = np.random.choice(
+			v[np.logical_not(self.upgraded.astype(bool))], 
+			size=n_of_inacs, replace=False)
+
+		return np.concatenate((acs, inacs))
+
+
 class Neighbourhood:
 
 	def __init__(self, s):
@@ -281,8 +389,8 @@ class Neighbourhood:
 	def neighbour_codes(self, k):
 
 		s = self.s
-
-		for comb in combinations(range(s.N), k):
+		N = s.globals.N
+		for comb in combinations(range(N), k):
 
 			delta = 0
 			exists_false = False
@@ -295,7 +403,7 @@ class Neighbourhood:
 					exists_false = True # TODO: never used variable
 					delta += s.globals.v_cost[v]
 
-			if s.running_cost + delta <= s.globals.budget:
+			if s.running_cost + delta <= s.globals.budget and exists_false:
 				yield comb
 
 
@@ -312,12 +420,12 @@ class Neighbourhood:
 
 		obj_value = s.obj_value()
 
-		# for v in update_code: # TODO: check if duplicated
+		for v in update_code:
 
-		# 	if not s.upgraded[v]:
-		# 		s.upgrade_vertex_unsafe(v)
-		# 	else:
-		# 		s.downgrade_vertex(v)
+			if not s.upgraded[v]:
+				s.upgrade_vertex_unsafe(v)
+			else:
+				s.downgrade_vertex(v)
 
 		return obj_value
 
