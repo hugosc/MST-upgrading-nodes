@@ -117,7 +117,7 @@ class Solution:
 	#
 	def compute_edge_upgrade_level(self):
 		return self.upgraded[self.globals.edges[:,0]].astype(int) \
-				+ self.upgraded[self.globals.edges[:,1]].astype(int)
+				+ self.upgraded[self.globals.edges[:,1]]
 
 
 	# Pretty print for solution state.
@@ -150,8 +150,8 @@ class Solution:
 
 		inc_mult = (mode * 1) + ((not mode) * -1)
 
-		self.fast_weight_update(v, inc_mult) # calcula certo
 		self.upgraded[v] = mode
+		self.fast_weight_update(v, inc_mult)
 		self.running_cost += inc_mult * self.globals.v_cost[v]
 
 		if update_mst:
@@ -175,6 +175,29 @@ class Solution:
 			self.edge_upgrade_level[e_indexes]]
 
 
+	# Batch version of fast_weight_update. Accepts a list of vertices. Works for
+	#  increment, decrement of a mix of both, since will compute the levels 
+	#  based on 'self.upgraded'.
+	#
+	def batch_weight_update(self, vertices):
+		e_indexes = np.array([])
+		levels = self.upgraded[self.globals.edges[:,0]].astype(int) \
+				+ self.upgraded[self.globals.edges[:,1]]
+
+		for v in vertices:
+		e_indexes = np.concatenate((
+			e_indexes, 
+			self.globals.edges[:, 2][np.logical_or(
+				self.globals.edges[:,0] == v,
+				self.globals.edges[:, 1] == v)]))
+
+		self.edge_upgrade_level[e_indexes] = \
+			self.upgraded[self.globals.edges[e_indexes, 0]].astype(int) +\
+			self.upgraded[self.globals.edges[e_index, 1]]
+
+		self.cur_edge_weight[e_indexes] = self.globals.ewa[e_indexes, 
+			self.edge_upgrade_level[e_indexes]]
+
 
 	def upgrade_vertex(self, v, update_mst=False):
 
@@ -184,6 +207,25 @@ class Solution:
 			return True
 
 		return False
+
+
+	# Batch upgrade of vertices. If the update_mst flag is unset, MST update
+	#  will not achieve the speed up of "_batch_mst_update". This function only
+	#  works for explicitly upgrades, vertex downgrades must be done with
+	#  'cleanse_state' since MST will have to be rerun for all edges.
+	#
+	def batch_vertex_upgrade(self, vertices, update_mst=False):
+		self.upgraded[vertices] = True
+		self.batch_weigth_update(vertices)
+		self.running_cost += np.sum(self.globals.v_cost[v])
+
+		if update_mst:
+			self._batch_mst_update(vertices)
+		else:
+			self._DIRTY = True
+
+		self.atualize_allowed_upgrades()
+
 
 
 	def downgrade_vertex(self, v, update_mst=False):
