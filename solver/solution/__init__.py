@@ -282,8 +282,8 @@ class Solution:
 	def _batch_mst_update(self, vertices):
 		self.globals.g.ep.weight.a = self.cur_edge_weight
 
-		self.mst.a[np.array(
-			[self.globals.g.get_out_edges(v)[:, 2] for v in vertices])] = True
+		self.mst.a[np.concatenate(np.array(
+			[self.globals.g.get_out_edges(v)[:, 2] for v in vertices]))] = True
 
 		self.globals.g.set_edge_filter(self.mst)
 		self.mst = gt_min_spanning_tree(self.globals.g, self.globals.g.ep.weight)

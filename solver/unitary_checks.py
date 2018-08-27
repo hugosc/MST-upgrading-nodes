@@ -15,7 +15,7 @@ sol2 = sol.copy()
 sol3 = sol.copy()
 
 vertices = [0, 9, 4, 3]
-sol.batch_vertex_upgrade(vertices)
+sol.batch_vertex_upgrade(vertices, update_mst=True)
 
 for v in vertices:
     sol2.upgrade_vertex(v)
