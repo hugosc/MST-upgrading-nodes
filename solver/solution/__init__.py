@@ -342,15 +342,17 @@ class Solution:
 	#  solution. Chooses 'n_total' vertices randomly, altough guarantees
 	#  that 'n_actives' to be upgraded and 'n_incatives' to not.
 	#
-	def random_pertubation_candidates(self, n_actives, n_inactives, n_total):
+	def random_perturbation_candidates(self, n_actives, n_inactives, n_total):
 		v = np.arange(self.globals.N)
-		n_of_acs = actives + np.random_integers(
+		n_of_acs = n_actives + np.random_integers(
 			n_total - n_actives - n_inactives)
 		n_of_inacs = n_total - n_of_acs
 
 		return np.concatenate((
-							   np.random.shuffle(v[self.upgraded])[n_of_acs],
-							   np.random.shuffle(v[not self.upgraded])[n_of_inacs]))
+							   np.random.shuffle(
+							   	v[self.upgraded])[n_of_acs],
+							   np.random.shuffle(
+							   	v[np.logical_not(self.upgraded)])[n_of_inacs]))
 
 
 class Neighbourhood:
