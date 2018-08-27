@@ -19,7 +19,7 @@ def select_candidate(sol, alpha):
 
 def build(sol, alpha):
 	s = sol.copy()
-	s.cleanse()
+	s.cleanse_to_state()
 	while not s.is_saturated():
 		u = select_candidate(s, alpha)
 		s.upgrade_vertex(int(u[1]), update_mst=True)

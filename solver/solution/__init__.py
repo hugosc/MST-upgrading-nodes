@@ -64,19 +64,11 @@ class Solution:
 		else:
 			self.upgraded = self.globals.g.vp.is_upgraded.a
 
-		self._DIRTY = False
-
-		self.running_cost = np.inner(self.globals.v_cost,self.upgraded)
-		self.cur_edge_weight = self.get_edge_weights()
-		self.edge_upgrade_level = np.zeros(len(self.cur_edge_weight), dtype=int)
-
-		self._update_mst()
-		self.atualize_allowed_upgrades()
-
-		self.mst_update_func = {True: self._fast_update_mst_upgrade,
-								False: self._fast_update_mst_upgrade}
+		self.cleanse_to_state(self.upgraded)
 
 		self.edge_filter = self.globals.g.new_edge_property("boolean")
+		self.mst_update_func = {True: self._fast_update_mst_upgrade,
+								False: self._fast_update_mst_upgrade}
 
 
 	# Compute which vertices are still able to be upgraded.
@@ -91,20 +83,41 @@ class Solution:
 	def get_edge_weights(self):
 		edges = self.globals.edges
 		return self.globals.ewa[np.arange(self.globals.E, dtype=int),
-		self.upgraded[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
+			self.upgraded[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
 
 
-	# Rewind the solution state to the initial one. All vertices are set to
-	#  downgrade and every solution state attribute is set as in object 
-	#  creation.
-	def cleanse(self):
-		self.upgraded = np.zeros(self.globals.N, dtype=bool)
-		self.running_cost = 0
+	# Rewind the solution state to a given state. When state is None, all 
+	#  vertices are set to downgrade and every solution state attribute is set 
+	#  as in object creation. The safe parameter can be used to cleanse to a
+	#  forbidden state.
+	#
+	def cleanse_to_state(self, state=None, safe=True):
+		upg = state
+		if upg is None:
+			upg = np.zeros(self.globals.N, dtype=bool)
+
+		r_cost = np.inner(self.globals.v_cost, upg)
+		if safe and r_cost > self.globals.budget:
+			return False
+
+		self.upgraded = upg
+		self.running_cost = np.inner(self.globals.v_cost, self.upgraded)
 		self.cur_edge_weight = self.get_edge_weights()
-		self.edge_upgrade_level = np.zeros(len(self.cur_edge_weight), dtype=int)
+		self.edge_upgrade_level = self.compute_edge_upgrade_level()
 		self._DIRTY = False
 		self._update_mst()
 		self.atualize_allowed_upgrades()
+
+		return True
+
+
+	# Find edge upgrade level for current solution state. The incremental
+	#  operation performed by fast_weight_update is more performatic when it
+	#  can be done.
+	#
+	def compute_edge_upgrade_level(self):
+		return self.upgraded[self.globals.edges[:,0]].astype(int) \
+				+ self.upgraded[self.globals.edges[:,1]].astype(int)
 
 
 	# Pretty print for solution state.
@@ -160,6 +173,7 @@ class Solution:
 		self.edge_upgrade_level[e_indexes] += inc
 		self.cur_edge_weight[e_indexes] = self.globals.ewa[e_indexes, 
 			self.edge_upgrade_level[e_indexes]]
+
 
 
 	def upgrade_vertex(self, v, update_mst=False):
