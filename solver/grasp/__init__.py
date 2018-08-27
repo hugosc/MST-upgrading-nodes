@@ -37,6 +37,11 @@ def fimprov_local_search(sol, neigh):
 	return sol
 
 
+# def iterated_local_search(sol, p_func, p_params, f_func, f_params, max_it=10):
+# 	n_it = 0
+# 	while n_it < max_it:
+# 		sol = 
+
 
 
 def grasp(solution, params, neigh, alpha=0.4, max_it=10):

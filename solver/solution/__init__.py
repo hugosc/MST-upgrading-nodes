@@ -130,7 +130,8 @@ class Solution:
 	#  reproducing the solution state of given vertices.
 	#
 	def copy(self):
-		return Solution(sol_globals=self.globals, sol_state=self.upgraded)
+		return Solution(sol_globals=self.globals, 
+			sol_state=np.copy(self.upgraded))
 
 
 	"""objective function value: weight of MST"""
@@ -180,20 +181,22 @@ class Solution:
 	#  based on 'self.upgraded'.
 	#
 	def batch_weight_update(self, vertices):
-		e_indexes = np.array([])
-		levels = self.upgraded[self.globals.edges[:,0]].astype(int) \
-				+ self.upgraded[self.globals.edges[:,1]]
+		e_indexes = np.array([], dtype=int)
 
+		# TODO: edges might come more than once on this iteration. Since the 
+		#  value is being set in a compliant way, this isn't a problem for 
+		#  correctness.
 		for v in vertices:
-		e_indexes = np.concatenate((
-			e_indexes, 
-			self.globals.edges[:, 2][np.logical_or(
-				self.globals.edges[:,0] == v,
-				self.globals.edges[:, 1] == v)]))
+			e_indexes = np.concatenate((
+				e_indexes, 
+				(self.globals.edges[:, 2][np.logical_or(
+					self.globals.edges[:,0] == v,
+					self.globals.edges[:, 1] == v)]).astype(int)))
+
 
 		self.edge_upgrade_level[e_indexes] = \
 			self.upgraded[self.globals.edges[e_indexes, 0]].astype(int) +\
-			self.upgraded[self.globals.edges[e_index, 1]]
+			self.upgraded[self.globals.edges[e_indexes, 1]]
 
 		self.cur_edge_weight[e_indexes] = self.globals.ewa[e_indexes, 
 			self.edge_upgrade_level[e_indexes]]
@@ -216,8 +219,8 @@ class Solution:
 	#
 	def batch_vertex_upgrade(self, vertices, update_mst=False):
 		self.upgraded[vertices] = True
-		self.batch_weigth_update(vertices)
-		self.running_cost += np.sum(self.globals.v_cost[v])
+		self.batch_weight_update(vertices)
+		self.running_cost += np.sum(self.globals.v_cost[vertices])
 
 		if update_mst:
 			self._batch_mst_update(vertices)
@@ -248,10 +251,10 @@ class Solution:
 
 	def _update_mst(self, v=None):
 
-		edge_weigth = self.globals.g.new_edge_property("double")
-		edge_weigth.a = self.cur_edge_weight
+		edge_weight = self.globals.g.new_edge_property("double")
+		edge_weight.a = self.cur_edge_weight
 
-		self.mst = gt_min_spanning_tree(self.globals.g, edge_weigth)
+		self.mst = gt_min_spanning_tree(self.globals.g, edge_weight)
 		self._obj_value = self.total_tree_delay()
 
 
