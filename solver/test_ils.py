@@ -49,6 +49,8 @@ def perturbate_and_local_search(sol, n_actives, n_inactives, n_total):
 	costs = sol.globals.v_cost[pert]
 	budget = sol.globals.budget - sol.running_cost
 
+	initial_rc = sol.running_cost
+
 	best_v = 1e10
 	best_upgrade = None
 
@@ -67,15 +69,14 @@ def perturbate_and_local_search(sol, n_actives, n_inactives, n_total):
 			best_v = sol.obj_value()
 			best_upgrade = upgrade
 
-		sol.cleanse_to_state(base_sol, mst=base_mst)
+		sol.cleanse_to_state(base_sol.copy(), mst=base_mst)
 
-	sol.batch_vertex_upgrade(best_update, update_mst=True)
+		assert initial_rc == sol.running_cost
+
+	if best_upgrade is not None:
+		sol.batch_vertex_upgrade(best_upgrade, update_mst=True)
 
 	return sol.obj_value()
-
-s = Solution(lambda x: x*0.5, '../instances/r100.in')
-s.batch_vertex_upgrade([0, 4, 5, 6, 2, 46, 9, 47], update_mst=True)
-perturbate_and_local_search(s, 2, 2, 6)
 
 
 

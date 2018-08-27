@@ -128,7 +128,8 @@ class Solution:
 	# Pretty print for solution state.
 	def __str__(self):
 		arr = self.upgraded.astype(int)
-		return '{}, with obj_value {}'.format(arr, self.obj_value())
+		return '{}, with obj_value {} and cost {}'.format(
+			arr, self.obj_value(), self.running_cost)
 
 
 	# Create a new solution passing a reference for 'globals' singleton and
@@ -223,6 +224,9 @@ class Solution:
 	#  'cleanse_state' since MST will have to be rerun for all edges.
 	#
 	def batch_vertex_upgrade(self, vertices, update_mst=False):
+		if not len(vertices):
+			return
+
 		self.upgraded[vertices] = True
 		self.batch_weight_update(vertices)
 		self.running_cost += np.sum(self.globals.v_cost[vertices])
