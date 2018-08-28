@@ -39,7 +39,13 @@ class SolutionGlobals:
 		self.ewa = self.edge_weight_array()
 		self.v_cost = self.g.vp.cost.a
 		self.budget = budget(np.sum(self.v_cost))
+
+		# graph tool returns edges not sorted by index
+		#  note: to see something really crazy, uncoment lines bellow
+		#
 		self.edges = self.g.get_edges()
+		self.edges = self.edges[self.edges[:,2].argsort()]
+
 		self.v_degree = self.g.get_out_degrees(self.g.get_vertices())
 
 
@@ -318,8 +324,10 @@ class Solution:
 	#
 	def vertex_impact_ratio_on_tree(self):
 
+
 		on_mst = self.mst.a.astype(bool)
 		edges = self.globals.edges[on_mst]
+
 		weights = self.cur_edge_weight[on_mst]
 
 		e_to_upg_1 = self.to_upg[edges[:,0]]
@@ -327,9 +335,10 @@ class Solution:
 
 		e_indexes = np.concatenate((edges[e_to_upg_1, 2], edges[e_to_upg_2, 2]))
 
+
 		# uses undirectedness of edges to represent different upgraded vertices
-		edges = np.concatenate((edges[:,:2][e_to_upg_1], 
-			edges[:,-2::-1][e_to_upg_2]))
+		edges = np.vstack((edges[:,[0,1]][e_to_upg_1], 
+					edges[:,[1,0]][e_to_upg_2]))
 		weights = np.concatenate((weights[e_to_upg_1], weights[e_to_upg_2]))
 		delta = weights - self.globals.ewa[e_indexes,
 		 self.to_upg[edges[:, 0]].astype(int) + self.upgraded[edges[:, 1]]]
@@ -341,7 +350,7 @@ class Solution:
 		edge_impact[:, 2] = np.cumsum(edge_impact[:,2])
 
 		selector = np.cumsum(
-			np.unique(edge_impact[:,0].astype(int), return_counts=True)[1]) - 1
+			np.unique(edge_impact[:, 0].astype(int), return_counts=True)[1]) - 1
 
 		impact = edge_impact[selector, 2] - np.concatenate(
 			([0], edge_impact[selector[:-1], 2]))
