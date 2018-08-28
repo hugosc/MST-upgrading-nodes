@@ -1,6 +1,5 @@
 from solution import *
-from numpy import inner
-
+import numpy as np
 
 def gen_viables(budget, costs):
 
@@ -22,7 +21,7 @@ def gen_viables(budget, costs):
 				u = list(v)
 				u[i] = True
 
-				if inner(u, costs) <= budget:
+				if np.inner(u, costs) <= budget:
 
 					is_maximal = False
 
