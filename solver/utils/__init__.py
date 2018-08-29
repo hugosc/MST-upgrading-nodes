@@ -135,3 +135,12 @@ def load_instance(filepath):
 	g.gp.total_cost = graph_total_cost
 
 	return g
+
+
+
+def paths_to_files(f_names, path):
+	p = path
+	if path[-1] != "/":
+		p += "/"
+	return [p + f_name.replace('\n', '') for f_name in f_names]
+
