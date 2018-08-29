@@ -1,6 +1,7 @@
 __all__ = ["load_instance"]
 
 from graph_tool.all import Graph
+import matplotlib.pyplot as plt
 import numpy as np
 
 #generic case, for sharing with class
@@ -144,3 +145,64 @@ def paths_to_files(f_names, path):
 		p += "/"
 	return [p + f_name.replace('\n', '') for f_name in f_names]
 
+
+# Plot mutliple curves sharing the same axis with different colors. If a tuple
+#  of curves is an element of color_axis, all the curves inside that tuple will
+#  have the same color.
+def plot_color_curves(x_axis, color_axis, labels=None, fig_name="figure.png",
+                      plot_title=None, x_label=None, y_label=None):
+    num_curves = len(color_axis)
+    colors = ['C' + str(c) for c in range(num_curves)]
+    plots = list()
+
+    for c in range(num_curves):
+        curves = color_axis[c]
+        c_color = colors[c]
+        c_label = labels[c]
+        if isinstance(curves, tuple):
+            for curve in curves[1:]:
+                plot, = plt.plot(x_axis, curve, color=c_color)
+                plots.append(plot)
+            curves = curves[0]
+        plot, = plt.plot(x_axis, curves, color=c_color, label=c_label)
+        plots.append(plot)
+
+    if plot_title is not None:
+        plt.title(plot_title)
+    if x_label is not None:
+        plt.xlabel(x_label)
+    if y_label is not None:
+        plt.ylabel(y_label)
+    plt.legend(handles=plots)
+    plt.grid(True) # coller
+    plt.savefig(fig_name)
+    plt.clf()
+
+
+
+
+def generic_curves(color_axis, labels=None, fig_name="figure.png",
+                      plot_title=None, x_label=None, y_label=None,
+                      plot_function=plt.plot):
+    fig = plt.figure()
+    num_curves = len(color_axis)
+    colors = ['C' + str(c) for c in range(num_curves)]
+    plots = list()
+
+    for c in range(num_curves):
+        curves = color_axis[c]
+        c_color = colors[c]
+        c_label = labels[c]
+        plots.append(plot_function(
+                     curves[0], curves[1], color=c_color, label=c_label))
+
+    if plot_title != None:
+        plt.title(plot_title, y=1.16)
+    if x_label != None:
+        plt.xlabel(x_label)
+    if y_label != None:
+        plt.ylabel(y_label)
+    plt.title(plot_title)#, y=1.16)
+    plt.legend()
+    plt.grid(True) # coller
+    plt.savefig(fig_name)
