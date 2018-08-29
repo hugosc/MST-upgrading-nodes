@@ -61,23 +61,20 @@ class Grasp:
 		n_it = 0
 		self.solution = self.solution(*self.params)
 		opt =  self.solution
-
+		t = time.time()
 		while n_it < self.max_it:
 			# print("Grasp iteration {}".format(n_it))
-			t = time.time()
 			sol1 = self.build(self.solution)
-			print(time.time() - t)
-			print("rcl")
-			t = time.time()
+			print("construção: ", sol1.obj_value())
 			local_search(sol1, *params)
-			print(time.time() - t)
+			print("melhoria ils: ", sol1.obj_value())
 
 			if opt._obj_value > sol1.obj_value():
 				opt = sol1
 			n_it += 1
 		# print(time.time() - t1)
 		print(opt)
-		return opt
+		return opt, time.time() - t
 
 
 def ils(sol, n_actives, n_inactives, n_total, n_it):
