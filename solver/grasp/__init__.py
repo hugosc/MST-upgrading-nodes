@@ -122,13 +122,15 @@ class Grasp:
 			if opt._obj_value > sol1.obj_value():
 				opt = sol1
 
-			print(opt)
-
-			print('PR+++++++')
 			self.path_rel(opt)
-			print('PR-------')
 
-			for s in self.elite: print('elite',s)	
+			for s in self.elite:
+				if opt._obj_value > s.obj_value():
+					opt = s
+
+			print("melhoria path-rel: ", opt.obj_value())
+
+			print(opt)
 
 			n_it += 1
 			# print(time.time() - t1)	
