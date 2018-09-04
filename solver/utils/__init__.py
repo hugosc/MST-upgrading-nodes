@@ -100,6 +100,7 @@ def load_instance(filepath):
 
 		# identify how weights are for vertices
 		line = f.readline()
+		# print(line)
 		v_cost = [ float(x) for x in line.split(" ") if x != " "]
 
 		if len(v_cost) > 1: # case where formatting is incorrect

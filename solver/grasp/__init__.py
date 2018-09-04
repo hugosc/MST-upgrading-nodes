@@ -25,6 +25,7 @@ class Grasp:
 		ratio = candidates[:,0]
 		alpha = np.min(
 			[1, np.max([0, np.random.normal(loc=self.alpha, scale = 0.1)])])
+		alpha = self.alpha
 		d = alpha * np.ptp(ratio)
 		c_max = np.max(ratio)
 
@@ -33,7 +34,8 @@ class Grasp:
 
 
 	def build(self, sol):
-		s = sol.copy()
+		# print(self.params)
+		s = self.solution(*self.params)
 		s.cleanse_to_state()
 		while not s.is_saturated():
 			u = self.select_candidate(s)
