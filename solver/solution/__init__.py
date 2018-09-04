@@ -465,3 +465,27 @@ def first_improvement(N, k):
 			return True
 
 	return False
+
+def grasp_vnd(Max_iteracoes,k,N,solucao_inicial):
+    
+      #k = 4 #máximo de elementos da solução que podem ser modificados
+    
+      #N = 1 # primeira estrutura de vizinhança
+    
+      vizinhanca = Neighbourhood(solucao_inicial)
+    
+   
+      for i in range(Max_iteracoes): #enquanto critério de parada não for  satisfeito  
+       
+             while (N<=k): #permitido a troca de 4 estruturas de vizinhança
+           
+                 if  first_improvement(vizinhanca,N): # melhoria trocando os vértices
+               
+                     print (solucao_inicial)
+                
+                     N = 1 
+            
+                 else:    
+                
+                     N = N + 1
+  
