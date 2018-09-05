@@ -47,6 +47,7 @@ class SolutionGlobals:
 		self.edges = self.edges[self.edges[:,2].argsort()]
 
 		self.v_degree = self.g.get_out_degrees(self.g.get_vertices())
+		self.num_of_evals = 0
 
 
 	# Gen array of edge weights with dimension (e,3).
@@ -274,6 +275,8 @@ class Solution:
 
 			self.mst = gt_min_spanning_tree(self.globals.g, edge_weight)
 
+		self.globals.num_of_evals += 1
+
 		self._obj_value = self.total_tree_delay()
 
 
@@ -286,6 +289,7 @@ class Solution:
 		self.mst = gt_min_spanning_tree(self.globals.g, self.globals.g.ep.weight)
 		self.globals.g.set_edge_filter(None)
 
+		self.globals.num_of_evals += 1
 		self._obj_value = self.total_tree_delay()
 
 
